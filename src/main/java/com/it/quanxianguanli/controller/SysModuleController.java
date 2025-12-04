@@ -1,6 +1,7 @@
 package com.it.quanxianguanli.controller;
 
 import com.it.quanxianguanli.dto.Result;
+import com.it.quanxianguanli.dto.TreeNode;
 import com.it.quanxianguanli.entity.SysModule;
 import com.it.quanxianguanli.service.SysModuleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +22,9 @@ public class SysModuleController {
     }
 
     @GetMapping("/tree")
-    public Result<List<SysModule>> tree() {
+    public Result<List<TreeNode>> tree() {
         return Result.success(moduleService.findTree());
     }
-
     @GetMapping("/children/{parentId}")
     public Result<List<SysModule>> getChildren(@PathVariable String parentId) {
         if ("null".equals(parentId) || "".equals(parentId)) {
@@ -44,7 +44,11 @@ public class SysModuleController {
 
     @PostMapping("/save")
     public Result<SysModule> save(@RequestBody SysModule module) {
-        return Result.success(moduleService.save(module));
+        try {
+            return Result.success(moduleService.save(module));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -57,4 +61,3 @@ public class SysModuleController {
         }
     }
 }
-

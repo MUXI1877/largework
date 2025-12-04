@@ -5,28 +5,36 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "sys_module")
 public class SysModule extends BaseEntity {
-    
-    @Column(name = "cn_name", nullable = false)
+
+    @Column(name = "cn_name", nullable = false, length = 50)
     private String cnName;
-    
-    @Column(name = "en_name")
+
+    @Column(name = "en_name", unique = true, length = 50)
     private String enName;
-    
+
     @Column(name = "menu_level")
     private Integer menuLevel;
-    
+
     private Integer sort;
-    
+
+    @Column(length = 100)
     private String path;
-    
+
+    @Column(length = 50)
     private String icon;
-    
-    @Column(name = "group_name")
+
+    @Column(name = "group_name", length = 50)
     private String groupName;
-    
+
+    @Column(name = "permission", length = 100)
+    private String permission;
+
+    @Column(name = "visible")
+    private Boolean visible = true;
+
     @Column(name = "parent_id", length = 36)
     private String parentId;
-    
+
     @Column(name = "is_parent")
     private Boolean isParent = false;
     
@@ -111,6 +119,22 @@ public class SysModule extends BaseEntity {
 
     public void setIsExpand(Boolean isExpand) {
         this.isExpand = isExpand;
+    }
+
+    public String getPermission() {
+        return permission;
+    }
+
+    public void setPermission(String permission) {
+        this.permission = permission;
+    }
+
+    public Boolean getVisible() {
+        return visible;
+    }
+
+    public void setVisible(Boolean visible) {
+        this.visible = visible;
     }
 }
 
