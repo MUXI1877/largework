@@ -57,6 +57,73 @@ const routes = [
         name: 'PermissionManagement',
         component: () => import('../views/PermissionManagement.vue'),
         meta: { title: '权限配置', moduleId: 'm005' }
+      },
+      // ------------ 业务模块路由（与 sys_module 中配置的 path/moduleId 对齐） ------------
+      {
+        path: '/basic-info/category',
+        name: 'BasicInfoCategory',
+        component: () => import('../views/BasicInfoCategory.vue'),
+        meta: { title: '信息分类', moduleId: 'm009' }
+      },
+      {
+        path: '/basic-info/list',
+        name: 'BasicInfoList',
+        component: () => import('../views/BasicInfoList.vue'),
+        meta: { title: '信息列表', moduleId: 'm010' }
+      },
+      {
+        path: '/sales/order',
+        name: 'SalesOrder',
+        component: () => import('../views/SalesOrder.vue'),
+        meta: { title: '销售订单', moduleId: 'm012' }
+      },
+      {
+        path: '/sales/statistic',
+        name: 'SalesStatistic',
+        component: () => import('../views/SalesStatistic.vue'),
+        meta: { title: '销售统计', moduleId: 'm013' }
+      },
+      {
+        path: '/price-book/maintain',
+        name: 'PriceMaintain',
+        component: () => import('../views/PriceMaintain.vue'),
+        meta: { title: '价格维护', moduleId: 'm015' }
+      },
+      {
+        path: '/price-book/history',
+        name: 'PriceHistory',
+        component: () => import('../views/PriceHistory.vue'),
+        meta: { title: '价格历史', moduleId: 'm016' }
+      },
+      {
+        path: '/receivable/list',
+        name: 'ReceivableList',
+        component: () => import('../views/ReceivableList.vue'),
+        meta: { title: '应收列表', moduleId: 'm018' }
+      },
+      {
+        path: '/receivable/receipt',
+        name: 'ReceiptRecord',
+        component: () => import('../views/ReceiptRecord.vue'),
+        meta: { title: '收款登记', moduleId: 'm019' }
+      },
+      {
+        path: '/receivable/aging',
+        name: 'AgingAnalysis',
+        component: () => import('../views/AgingAnalysis.vue'),
+        meta: { title: '账龄分析', moduleId: 'm020' }
+      },
+      {
+        path: '/service/order',
+        name: 'ServiceOrder',
+        component: () => import('../views/ServiceOrder.vue'),
+        meta: { title: '服务工单', moduleId: 'm022' }
+      },
+      {
+        path: '/service/record',
+        name: 'ServiceRecord',
+        component: () => import('../views/ServiceRecord.vue'),
+        meta: { title: '服务记录', moduleId: 'm023' }
       }
     ]
   }

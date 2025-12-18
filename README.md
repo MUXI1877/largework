@@ -52,7 +52,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/quanxianguanli?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
     username: root
-    password: liyuan12345211
+    password: 123456
 ```
 
 ### 2. 创建数据库

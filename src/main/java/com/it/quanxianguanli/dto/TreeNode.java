@@ -1,6 +1,7 @@
 package com.it.quanxianguanli.dto;
 
 import com.it.quanxianguanli.entity.SysModule;
+import com.it.quanxianguanli.entity.BasicInfo;
 import lombok.Data;
 import java.util.List;
 
@@ -20,7 +21,8 @@ public class TreeNode {
     private Boolean isParent;
     private List<TreeNode> children;
 
-    public TreeNode() {}
+    public TreeNode() {
+    }
 
     public TreeNode(SysModule module) {
         this.id = module.getId();
@@ -35,5 +37,13 @@ public class TreeNode {
         this.visible = module.getVisible();
         this.parentId = module.getParentId();
         this.isParent = module.getIsParent();
+    }
+
+    public TreeNode(BasicInfo basicInfo) {
+        this.id = basicInfo.getId();
+        this.cnName = basicInfo.getName();
+        this.enName = basicInfo.getCode();
+        this.sort = basicInfo.getSort();
+        this.parentId = basicInfo.getParentId();
     }
 }
