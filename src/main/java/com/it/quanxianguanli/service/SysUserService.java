@@ -39,6 +39,10 @@ public class SysUserService {
         user.setUsername(user.getPhone());
         user.setPassword(PasswordUtil.encode("123456"));
         user.setIsApproved(true);
+        // 默认分配普通用户角色，避免未分配角色导致无权限
+        if (user.getRoleId() == null || user.getRoleId().isEmpty()) {
+            user.setRoleId("r003");
+        }
         return userRepository.save(user);
     }
 

@@ -10,30 +10,16 @@
     </el-header>
     <el-container>
       <el-aside width="200px" class="aside">
-        <el-menu
-          :default-active="activeMenu"
-          router
-          class="menu"
-        >
-          <el-menu-item index="/user-management">
-            <el-icon><User /></el-icon>
-            <span>账号管理</span>
-          </el-menu-item>
-          <el-menu-item index="/role-management">
-            <el-icon><Avatar /></el-icon>
-            <span>角色管理</span>
-          </el-menu-item>
-          <el-menu-item index="/option-management">
-            <el-icon><Setting /></el-icon>
-            <span>选项管理</span>
-          </el-menu-item>
-          <el-menu-item index="/module-management">
-            <el-icon><Menu /></el-icon>
-            <span>模块管理</span>
-          </el-menu-item>
-          <el-menu-item index="/permission-management">
-            <el-icon><Lock /></el-icon>
-            <span>权限配置</span>
+        <el-menu :default-active="activeMenu" router class="menu">
+          <el-menu-item
+            v-for="item in [...HOME_MENU, ...menuItems]"
+            :key="item.path"
+            :index="item.path"
+          >
+            <el-icon>
+              <component :is="item.icon" />
+            </el-icon>
+            <span>{{ item.label }}</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -45,15 +31,79 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { removeToken } from '../utils/auth'
+import { getMyPermissions } from '../api/permission'
+import { User, Avatar, Setting, Menu as MenuIcon, Lock, House } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 
 const activeMenu = computed(() => route.path)
+
+const HOME_MENU = [{ path: '/home', label: '首页', icon: House }]
+const ICON_MAP = {
+  m002: User,
+  m003: Avatar,
+  m004: MenuIcon,
+  m005: Lock,
+  m007: Setting
+}
+
+const menuItems = ref([])
+
+const loadMenu = async () => {
+  try {
+    const res = await getMyPermissions()
+    const permissions = res.data || []
+    const allowedModuleIds = new Set(
+      permissions.filter((p) => p.canSee).map((p) => p.moduleId)
+    )
+
+    // 动态从路由构建菜单，支持新增模块
+    const dynamicMenus = router
+      .getRoutes()
+      .filter(
+        (r) =>
+          r.meta &&
+          r.meta.moduleId &&
+          allowedModuleIds.has(r.meta.moduleId) &&
+          r.path.startsWith('/')
+      )
+      .map((r) => ({
+        path: r.path,
+        label: r.meta.title || r.name || r.path,
+        icon: ICON_MAP[r.meta.moduleId] || MenuIcon
+      }))
+
+    const seen = new Set()
+    menuItems.value = dynamicMenus
+      .filter((m) => {
+        if (seen.has(m.path)) return false
+        seen.add(m.path)
+        return true
+      })
+      .sort((a, b) => a.label.localeCompare(b.label))
+
+    if (menuItems.value.length === 0) {
+      ElMessage.warning('当前角色无可访问模块')
+      return
+    }
+
+    const isCurrentAllowed = menuItems.value.some(
+      (item) => item.path === route.path
+    )
+    if (!isCurrentAllowed) {
+      router.replace(menuItems.value[0].path)
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '加载权限信息失败')
+    removeToken()
+    router.push('/login')
+  }
+}
 
 const handleLogout = () => {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {
@@ -65,6 +115,10 @@ const handleLogout = () => {
     router.push('/login')
   })
 }
+
+onMounted(() => {
+  loadMenu()
+})
 </script>
 
 <style scoped>

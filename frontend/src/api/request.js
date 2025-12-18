@@ -13,15 +13,18 @@ request.interceptors.request.use(
         const token = localStorage.getItem('token')
         console.log('请求拦截器 - URL:', config.url, 'Token存在:', !!token)
 
+        // ✅ 添加请求数据调试
+        if (config.data) {
+            console.log('请求数据:', JSON.stringify(config.data, null, 2))
+        }
+
         // 注册、登录、身份证验证和选项接口不需要token
         const noAuthUrls = ['/auth/', '/user/register', '/user/verify', '/option/list']
-        // 检查当前请求URL是否包含免token路径
         const isNoAuthUrl = noAuthUrls.some(url => config.url.includes(url))
 
         console.log('是否免token接口:', isNoAuthUrl)
 
         if (isNoAuthUrl) {
-            // 如果是免token接口，无论token是否存在，都不添加Authorization头
             console.log('跳过添加Authorization头')
             return config
         }

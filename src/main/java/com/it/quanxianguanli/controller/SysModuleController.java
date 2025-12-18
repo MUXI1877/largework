@@ -4,10 +4,12 @@ import com.it.quanxianguanli.dto.Result;
 import com.it.quanxianguanli.dto.TreeNode;
 import com.it.quanxianguanli.entity.SysModule;
 import com.it.quanxianguanli.service.SysModuleService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/module")
@@ -15,6 +17,17 @@ public class SysModuleController {
 
     @Autowired
     private SysModuleService moduleService;
+
+    private static final Set<String> ADMIN_ROLES = Set.of("r001", "r002");
+
+    private boolean isAdmin(HttpServletRequest request) {
+        Object roleId = request.getAttribute("roleId");
+        return roleId != null && ADMIN_ROLES.contains(roleId.toString());
+    }
+
+    private <T> Result<T> forbidden() {
+        return Result.error(403, "无权限操作");
+    }
 
     @GetMapping("/list")
     public Result<List<SysModule>> list() {
@@ -43,7 +56,10 @@ public class SysModuleController {
     }
 
     @PostMapping("/save")
-    public Result<SysModule> save(@RequestBody SysModule module) {
+    public Result<SysModule> save(@RequestBody SysModule module, HttpServletRequest request) {
+        if (!isAdmin(request)) {
+            return forbidden();
+        }
         try {
             return Result.success(moduleService.save(module));
         } catch (Exception e) {
@@ -52,7 +68,10 @@ public class SysModuleController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id) {
+    public Result<Void> delete(@PathVariable String id, HttpServletRequest request) {
+        if (!isAdmin(request)) {
+            return forbidden();
+        }
         try {
             moduleService.deleteById(id);
             return Result.success("删除成功", null);

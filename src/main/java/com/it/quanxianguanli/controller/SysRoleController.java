@@ -2,11 +2,16 @@ package com.it.quanxianguanli.controller;
 
 import com.it.quanxianguanli.dto.Result;
 import com.it.quanxianguanli.entity.SysRole;
+import com.it.quanxianguanli.entity.SysPermission;
 import com.it.quanxianguanli.service.SysRoleService;
+import com.it.quanxianguanli.service.SysPermissionService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
 
 @RestController
 @RequestMapping("/api/role")
@@ -15,20 +20,57 @@ public class SysRoleController {
     @Autowired
     private SysRoleService roleService;
 
+    @Autowired
+    private SysPermissionService permissionService;
+
+    private static final Set<String> ADMIN_ROLES = Set.of("r001", "r002");
+    private static final String MODULE_ROLE = "m003";
+
+    private boolean isAdmin(HttpServletRequest request) {
+        Object roleId = request.getAttribute("roleId");
+        return roleId != null && ADMIN_ROLES.contains(roleId.toString());
+    }
+
+    private boolean hasPermission(HttpServletRequest request, String moduleId, Predicate<SysPermission> predicate) {
+        if (isAdmin(request)) {
+            return true;
+        }
+        Object roleId = request.getAttribute("roleId");
+        if (roleId == null) {
+            return false;
+        }
+        return permissionService.findByRoleIdAndModuleId(roleId.toString(), moduleId)
+                .map(predicate::test)
+                .orElse(false);
+    }
+
+    private <T> Result<T> forbidden() {
+        return Result.error(403, "无权限操作");
+    }
+
     @GetMapping("/list")
-    public Result<List<SysRole>> list() {
+    public Result<List<SysRole>> list(HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_ROLE, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return Result.success(roleService.findAll());
     }
 
     @GetMapping("/{id}")
-    public Result<SysRole> getById(@PathVariable String id) {
+    public Result<SysRole> getById(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_ROLE, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return roleService.findById(id)
                 .map(Result::success)
                 .orElse(Result.error("角色不存在"));
     }
 
     @PostMapping("/save")
-    public Result<SysRole> save(@RequestBody SysRole role) {
+    public Result<SysRole> save(@RequestBody SysRole role, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_ROLE, p -> Boolean.TRUE.equals(p.getCanUpdate()))) {
+            return forbidden();
+        }
         try {
             return Result.success(roleService.save(role));
         } catch (Exception e) {
@@ -37,7 +79,10 @@ public class SysRoleController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id) {
+    public Result<Void> delete(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_ROLE, p -> Boolean.TRUE.equals(p.getCanUpdate()))) {
+            return forbidden();
+        }
         try {
             roleService.deleteById(id);
             return Result.success("删除成功", null);
