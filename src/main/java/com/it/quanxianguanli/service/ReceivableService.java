@@ -90,20 +90,20 @@ public class ReceivableService {
         BigDecimal increment = BigDecimal.valueOf(amount);
         BigDecimal newReceivedAmount = currentReceived.add(increment);
         receivable.setReceivedAmount(newReceivedAmount);
-
+        
         // 使用 BigDecimal 比较金额，避免 double 精度问题
         BigDecimal totalAmount = receivable.getAmount();
         if (totalAmount != null) {
             int cmp = newReceivedAmount.compareTo(totalAmount);
             if (cmp >= 0) {
                 // 已收金额达到或超过应收金额，标记为已结清
-                receivable.setStatus("已结清");
+            receivable.setStatus("已结清");
             } else if (newReceivedAmount.compareTo(BigDecimal.ZERO) > 0) {
                 // 已有部分收款
-                receivable.setStatus("部分结清");
+            receivable.setStatus("部分结清");
             }
         }
-
+        
         return receivableRepository.save(receivable);
     }
 }

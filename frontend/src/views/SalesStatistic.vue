@@ -176,6 +176,12 @@ const calculateAverageOrderAmount = () => {
 
 // 查询统计数据
 const handleQuery = async () => {
+  // 必须选择日期范围，避免向后端传递 undefined
+  if (!dateRange.value || dateRange.value.length !== 2) {
+    ElMessage.warning('请先选择统计的开始和结束日期')
+    return
+  }
+
   try {
     const [startDate, endDate] = dateRange.value
     
@@ -223,8 +229,11 @@ const handleExport = () => {
 }
 
 onMounted(() => {
-  // 初始化时查询默认日期范围的数据
-  // 这里可以设置默认日期范围，比如最近30天
+  // 初始化默认日期范围为最近30天，并自动查询一次
+  const end = new Date()
+  const start = new Date()
+  start.setDate(start.getDate() - 30)
+  dateRange.value = [start, end]
   handleQuery()
 })
 </script>
