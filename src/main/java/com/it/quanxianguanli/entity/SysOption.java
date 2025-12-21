@@ -5,24 +5,24 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "sys_option")
 public class SysOption extends BaseEntity {
-    
-    @Column(name = "group_name", nullable = false)
-    private String groupName;
-    
-    @Column(nullable = false)
+
+    @Column(name = "group_name", nullable = false, length = 50)
+    private String group;
+
+    @Column(nullable = false, length = 100)
     private String title;
-    
-    @Column(name = "option_value")
-    private String optionValue;
-    
+
+    @Column(name = "option_value", length = 100)
+    private String value;
+
     private Integer sort;
 
-    public String getGroupName() {
-        return groupName;
+    public String getGroup() {
+        return group;
     }
 
-    public void setGroupName(String groupName) {
-        this.groupName = groupName;
+    public void setGroup(String group) {
+        this.group = group;
     }
 
     public String getTitle() {
@@ -33,12 +33,12 @@ public class SysOption extends BaseEntity {
         this.title = title;
     }
 
-    public String getOptionValue() {
-        return optionValue;
+    public String getValue() {
+        return value;
     }
 
-    public void setOptionValue(String optionValue) {
-        this.optionValue = optionValue;
+    public void setValue(String value) {
+        this.value = value;
     }
 
     public Integer getSort() {
@@ -49,4 +49,3 @@ public class SysOption extends BaseEntity {
         this.sort = sort;
     }
 }
-

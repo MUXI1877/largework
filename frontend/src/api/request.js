@@ -45,8 +45,8 @@ request.interceptors.response.use(
         if (res.code === 200) {
             return res
         } else {
-            ElMessage.error(res.message || '请求失败')
-            return Promise.reject(new Error(res.message || '请求失败'))
+            ElMessage.error(res.msg || res.message || '请求失败')
+            return Promise.reject(new Error(res.msg || res.message || '请求失败'))
         }
     },
     error => {
@@ -55,7 +55,8 @@ request.interceptors.response.use(
             router.push('/login')
             ElMessage.error('登录已过期，请重新登录')
         } else {
-            ElMessage.error(error.message || '请求失败')
+            const errorMsg = error.response?.data?.msg || error.response?.data?.message || error.message || '请求失败'
+            ElMessage.error(errorMsg)
         }
         return Promise.reject(error)
     }

@@ -8,6 +8,5 @@ import java.util.List;
 
 @Repository
 public interface SysOptionRepository extends JpaRepository<SysOption, String> {
-    List<SysOption> findByGroupNameOrderBySortAsc(String groupName);
+    List<SysOption> findByGroupOrderBySortAsc(String group);
 }
-

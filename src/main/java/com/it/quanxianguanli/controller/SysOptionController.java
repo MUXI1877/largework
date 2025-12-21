@@ -29,9 +29,9 @@ public class SysOptionController {
     }
 
     @GetMapping("/list")
-    public Result<List<SysOption>> list(@RequestParam(required = false) String groupName) {
-        if (groupName != null && !groupName.isEmpty()) {
-            return Result.success(optionService.findByGroupName(groupName));
+    public Result<List<SysOption>> list(@RequestParam(required = false) String group) {
+        if (group != null && !group.isEmpty()) {
+            return Result.success(optionService.findByGroup(group));
         }
         return Result.success(optionService.findAll());
     }
@@ -62,4 +62,3 @@ public class SysOptionController {
         return Result.success("删除成功", null);
     }
 }
-

@@ -18,8 +18,8 @@ public class SysOptionService {
         return optionRepository.findAll();
     }
 
-    public List<SysOption> findByGroupName(String groupName) {
-        return optionRepository.findByGroupNameOrderBySortAsc(groupName);
+    public List<SysOption> findByGroup(String group) {
+        return optionRepository.findByGroupOrderBySortAsc(group);
     }
 
     public SysOption findById(String id) {
@@ -36,4 +36,3 @@ public class SysOptionService {
         optionRepository.deleteById(id);
     }
 }
-
