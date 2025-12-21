@@ -1,0 +1,10 @@
+package com.it.quanxianguanli.repository;
+
+import com.it.quanxianguanli.entity.SalesLead;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface SalesLeadRepository extends JpaRepository<SalesLead, String> {
+}
+
