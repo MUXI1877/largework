@@ -57,6 +57,24 @@ const routes = [
         name: 'PermissionManagement',
         component: () => import('../views/PermissionManagement.vue'),
         meta: { title: '权限配置', moduleId: 'm005' }
+      },
+      {
+        path: '/customer-management',
+        name: 'CustomerManagement',
+        component: () => import('../views/CustomerManagement.vue'),
+        meta: { title: '客户管理', moduleId: 'm008' }
+      },
+      {
+        path: '/team-management',
+        name: 'TeamManagement',
+        component: () => import('../views/TeamManagement.vue'),
+        meta: { title: '团队信息管理', moduleId: 'm009' }
+      },
+      {
+        path: '/product-management',
+        name: 'ProductManagement',
+        component: () => import('../views/ProductManagement.vue'),
+        meta: { title: '产品管理', moduleId: 'm010' }
       }
     ]
   }

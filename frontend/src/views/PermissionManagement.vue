@@ -285,9 +285,11 @@ const handleCheck = async (data, { checkedKeys: keys }) => {
     permissionForm.canSee = isChecked
   }
 
-  // ✅ 记录待保存的修改 - 关键修复：确保包含ID字段
+  // ✅ 记录待保存的修改 - 关键修复：确保包含ID字段和正确的roleId
   const permissionData = {
     ...permissionForm,
+    roleId: selectedRoleId.value,  // 确保使用当前选中的角色ID
+    moduleId: data.id,  // 确保使用当前模块ID
     id: permission ? permission.id : undefined  // 包含原有权限记录的ID
   }
   pendingChanges.value.set(data.id, permissionData)
@@ -324,6 +326,34 @@ const saveAllChanges = async () => {
 
   try {
     const changes = Array.from(pendingChanges.value.values())
+    
+    // ✅ 关键修复：确保所有记录的roleId都正确设置，并验证数据完整性
+    changes.forEach((change, index) => {
+      // 强制设置roleId为当前选中的角色
+      change.roleId = selectedRoleId.value
+      
+      // 确保所有必填字段都有值
+      if (!change.moduleId) {
+        throw new Error(`模块ID为空，无法保存（记录索引: ${index}）`)
+      }
+      
+      // 确保布尔字段有默认值
+      if (change.canRead === undefined) change.canRead = false
+      if (change.canAdd === undefined) change.canAdd = false
+      if (change.canUpdate === undefined) change.canUpdate = false
+      if (change.canSee === undefined) change.canSee = false
+      
+      // 移除undefined的id字段，避免序列化问题
+      if (change.id === undefined) {
+        delete change.id
+      }
+    })
+    
+    console.log('批量保存权限数据:', {
+      roleId: selectedRoleId.value,
+      count: changes.length,
+      changes: changes.map(c => ({ roleId: c.roleId, moduleId: c.moduleId, canSee: c.canSee }))
+    })
 
     // 后端批量保存，避免频繁请求遗漏
     await bulkSavePermission(changes)
@@ -334,7 +364,9 @@ const saveAllChanges = async () => {
     // 重新加载权限数据，确保显示最新状态
     await handleRoleChange()
   } catch (error) {
-    ElMessage.error(error.message || '批量保存权限失败')
+    console.error('批量保存权限失败:', error)
+    const errorMsg = error.response?.data?.message || error.message || '批量保存权限失败'
+    ElMessage.error(errorMsg)
   }
 }
 

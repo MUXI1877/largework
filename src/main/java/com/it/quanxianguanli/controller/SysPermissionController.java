@@ -3,6 +3,7 @@ package com.it.quanxianguanli.controller;
 import com.it.quanxianguanli.dto.Result;
 import com.it.quanxianguanli.entity.SysPermission;
 import com.it.quanxianguanli.entity.SysModule;
+import com.it.quanxianguanli.repository.SysRoleRepository;
 import com.it.quanxianguanli.service.SysPermissionService;
 import com.it.quanxianguanli.service.SysModuleService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/permission")
@@ -25,6 +27,9 @@ public class SysPermissionController {
 
     @Autowired
     private SysModuleService moduleService;
+    
+    @Autowired
+    private SysRoleRepository roleRepository;
 
     private static final Set<String> ADMIN_ROLES = Set.of("r001", "r002");
 
@@ -103,10 +108,26 @@ public class SysPermissionController {
             }
 
             // ✅ 验证必填字段
-            if (permission.getRoleId() == null || permission.getModuleId() == null) {
-                logger.error("保存权限失败 - 缺少必填字段: roleId={}, moduleId={}",
-                        permission.getRoleId(), permission.getModuleId());
-                return Result.error(400, "缺少必填字段：roleId和moduleId");
+            if (permission.getRoleId() == null || permission.getRoleId().isEmpty()) {
+                logger.error("保存权限失败 - 缺少必填字段: roleId为空");
+                return Result.error(400, "缺少必填字段：roleId");
+            }
+            if (permission.getModuleId() == null || permission.getModuleId().isEmpty()) {
+                logger.error("保存权限失败 - 缺少必填字段: moduleId为空");
+                return Result.error(400, "缺少必填字段：moduleId");
+            }
+
+            // ✅ 验证角色是否存在
+            if (!roleRepository.existsById(permission.getRoleId())) {
+                logger.error("保存权限失败 - 角色不存在: roleId={}", permission.getRoleId());
+                return Result.error(400, "角色不存在，请先创建该角色（roleId: " + permission.getRoleId() + "，常见角色ID: r001-超级管理员, r002-系统管理员, r003-普通用户）");
+            }
+            
+            // ✅ 验证模块是否存在
+            SysModule module = moduleService.findById(permission.getModuleId());
+            if (module == null) {
+                logger.error("保存权限失败 - 模块不存在: moduleId={}", permission.getModuleId());
+                return Result.error(400, "模块不存在，请先创建模块（moduleId: " + permission.getModuleId() + "）");
             }
 
             // ✅ 验证布尔字段不为null
@@ -116,7 +137,7 @@ public class SysPermissionController {
             if (permission.getCanSee() == null) permission.setCanSee(false);
 
             SysPermission result = permissionService.save(permission);
-            logger.info("保存权限成功 - ID: {}", result.getId());
+            logger.info("保存权限成功 - ID: {}, 角色: {}, 模块: {}", result.getId(), result.getRoleId(), result.getModuleId());
             return Result.success(result);
 
         } catch (Exception e) {
@@ -136,33 +157,88 @@ public class SysPermissionController {
                 return Result.error(401, "未登录");
             }
 
+            String currentRoleIdStr = currentRoleId.toString();
+            
+            // 验证当前用户角色是否存在
+            if (!roleRepository.existsById(currentRoleIdStr)) {
+                logger.error("批量保存权限失败 - 当前用户角色不存在: roleId={}", currentRoleIdStr);
+                return Result.error(400, "当前用户角色不存在，请联系管理员（roleId: " + currentRoleIdStr + "）");
+            }
+
             if (!isAdmin(request)) {
                 boolean invalid = permissions.stream().anyMatch(p ->
-                        p.getRoleId() != null && !p.getRoleId().equals(currentRoleId.toString()));
+                        p.getRoleId() != null && !p.getRoleId().equals(currentRoleIdStr));
                 if (invalid) {
-                    logger.warn("批量保存权限失败 - 权限不足: 当前角色={}", currentRoleId);
+                    logger.warn("批量保存权限失败 - 权限不足: 当前角色={}", currentRoleIdStr);
                     return forbidden();
                 }
             }
 
-            permissions.forEach(p -> {
+            // 验证所有权限数据
+            for (int i = 0; i < permissions.size(); i++) {
+                SysPermission p = permissions.get(i);
+                logger.debug("验证权限记录 {}: roleId={}, moduleId={}", i, p.getRoleId(), p.getModuleId());
+                
                 // 若未传roleId，默认使用当前用户角色，避免外键约束报错
-                if (p.getRoleId() == null || p.getRoleId().isEmpty()) {
-                    p.setRoleId(currentRoleId.toString());
+                if (p.getRoleId() == null || p.getRoleId().isEmpty() || p.getRoleId().trim().isEmpty()) {
+                    logger.info("权限记录 {} 的roleId为空，使用当前用户角色: {}", i, currentRoleIdStr);
+                    p.setRoleId(currentRoleIdStr);
                 }
+                
+                // ✅ 验证角色是否存在（使用trim确保没有空格）
+                String roleId = p.getRoleId().trim();
+                p.setRoleId(roleId);
+                if (!roleRepository.existsById(roleId)) {
+                    logger.error("批量保存权限失败 - 角色不存在: roleId={}, 记录索引={}", roleId, i);
+                    // 列出所有存在的角色ID，帮助用户排查
+                    List<String> existingRoleIds = roleRepository.findAll().stream()
+                            .map(r -> r.getId())
+                            .collect(Collectors.toList());
+                    return Result.error(400, String.format("角色不存在，roleId: %s（记录索引: %d）。存在的角色ID: %s。请先执行 data_init.sql 初始化角色数据", 
+                            roleId, i, existingRoleIds));
+                }
+                
                 // moduleId 为空直接报错
-                if (p.getModuleId() == null || p.getModuleId().isEmpty()) {
-                    throw new IllegalArgumentException("缺少必填字段：moduleId");
+                if (p.getModuleId() == null || p.getModuleId().isEmpty() || p.getModuleId().trim().isEmpty()) {
+                    logger.error("批量保存权限失败 - moduleId为空: 记录索引={}", i);
+                    throw new IllegalArgumentException("缺少必填字段：moduleId（记录索引: " + i + "）");
                 }
+                
+                // 验证模块是否存在
+                String moduleId = p.getModuleId().trim();
+                p.setModuleId(moduleId);
+                SysModule module = moduleService.findById(moduleId);
+                if (module == null) {
+                    logger.error("批量保存权限失败 - 模块不存在: moduleId={}, 记录索引={}", moduleId, i);
+                    throw new IllegalArgumentException("模块不存在，moduleId: " + moduleId + "（记录索引: " + i + "），请先创建该模块");
+                }
+                
                 if (p.getCanRead() == null) p.setCanRead(false);
                 if (p.getCanAdd() == null) p.setCanAdd(false);
                 if (p.getCanUpdate() == null) p.setCanUpdate(false);
                 if (p.getCanSee() == null) p.setCanSee(false);
-            });
+                
+                logger.debug("权限记录 {} 验证通过: roleId={}, moduleId={}", i, roleId, moduleId);
+            }
 
+            logger.info("所有权限记录验证通过，开始批量保存...");
             permissionService.saveAll(permissions);
-            logger.info("批量保存权限成功");
+            logger.info("批量保存权限成功，共保存 {} 条记录", permissions.size());
             return Result.success("保存成功", null);
+        } catch (IllegalArgumentException e) {
+            logger.error("批量保存权限失败 - 参数错误: " + e.getMessage(), e);
+            return Result.error(400, e.getMessage());
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            logger.error("批量保存权限失败 - 数据完整性约束违反: " + e.getMessage(), e);
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.contains("FOREIGN KEY")) {
+                if (errorMsg.contains("role_id")) {
+                    return Result.error(400, "外键约束失败：角色不存在。请先执行 data_init.sql 初始化角色数据（r001, r002, r003）");
+                } else if (errorMsg.contains("module_id")) {
+                    return Result.error(400, "外键约束失败：模块不存在。请先执行 module_init.sql 初始化模块数据");
+                }
+            }
+            return Result.error(400, "数据完整性约束违反：" + e.getMessage());
         } catch (Exception e) {
             logger.error("批量保存权限失败 - 系统错误: " + e.getMessage(), e);
             return Result.error(500, "批量保存权限失败: " + e.getMessage());

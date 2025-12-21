@@ -26,16 +26,31 @@ public class SysPermissionService {
 
     @Transactional
     public SysPermission save(SysPermission permission) {
+        // 验证必填字段
+        if (permission.getRoleId() == null || permission.getRoleId().isEmpty()) {
+            throw new IllegalArgumentException("roleId不能为空");
+        }
+        if (permission.getModuleId() == null || permission.getModuleId().isEmpty()) {
+            throw new IllegalArgumentException("moduleId不能为空");
+        }
+        
         Optional<SysPermission> existing = permissionRepository.findByRoleIdAndModuleId(
                 permission.getRoleId(), permission.getModuleId());
         if (existing.isPresent()) {
             SysPermission existingPerm = existing.get();
-            existingPerm.setCanRead(permission.getCanRead());
-            existingPerm.setCanAdd(permission.getCanAdd());
-            existingPerm.setCanUpdate(permission.getCanUpdate());
-            existingPerm.setCanSee(permission.getCanSee());
+            existingPerm.setCanRead(permission.getCanRead() != null ? permission.getCanRead() : false);
+            existingPerm.setCanAdd(permission.getCanAdd() != null ? permission.getCanAdd() : false);
+            existingPerm.setCanUpdate(permission.getCanUpdate() != null ? permission.getCanUpdate() : false);
+            existingPerm.setCanSee(permission.getCanSee() != null ? permission.getCanSee() : false);
             return permissionRepository.save(existingPerm);
         }
+        
+        // 确保布尔字段不为null
+        if (permission.getCanRead() == null) permission.setCanRead(false);
+        if (permission.getCanAdd() == null) permission.setCanAdd(false);
+        if (permission.getCanUpdate() == null) permission.setCanUpdate(false);
+        if (permission.getCanSee() == null) permission.setCanSee(false);
+        
         return permissionRepository.save(permission);
     }
 
@@ -44,8 +59,13 @@ public class SysPermissionService {
      */
     @Transactional
     public void saveAll(List<SysPermission> permissions) {
-        for (SysPermission permission : permissions) {
-            save(permission);
+        for (int i = 0; i < permissions.size(); i++) {
+            SysPermission permission = permissions.get(i);
+            try {
+                save(permission);
+            } catch (Exception e) {
+                throw new RuntimeException("保存权限记录失败（索引: " + i + ", roleId: " + permission.getRoleId() + ", moduleId: " + permission.getModuleId() + "）: " + e.getMessage(), e);
+            }
         }
     }
 
