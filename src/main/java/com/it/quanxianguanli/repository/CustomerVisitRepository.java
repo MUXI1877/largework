@@ -2,12 +2,13 @@ package com.it.quanxianguanli.repository;
 
 import com.it.quanxianguanli.entity.CustomerVisit;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface CustomerVisitRepository extends JpaRepository<CustomerVisit, String> {
+public interface CustomerVisitRepository extends JpaRepository<CustomerVisit, String>, JpaSpecificationExecutor<CustomerVisit> {
     List<CustomerVisit> findByCustomerId(String customerId);
 }
 

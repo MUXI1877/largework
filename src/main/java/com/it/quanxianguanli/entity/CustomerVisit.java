@@ -22,6 +22,15 @@ public class CustomerVisit extends BaseEntity {
     @Column(name = "status", length = 50)
     private String status; // 状态
     
+    @Column(name = "contact_person", length = 100)
+    private String contactPerson; // 联络员
+    
+    @Column(name = "contact_department", length = 100)
+    private String contactDepartment; // 联络员所属部门
+    
+    @Column(name = "visit_matter", length = 500)
+    private String visitMatter; // 来访事宜
+    
     @Column(name = "remarks", length = 1000)
     private String remarks; // 备注
 
@@ -71,6 +80,30 @@ public class CustomerVisit extends BaseEntity {
 
     public void setRemarks(String remarks) {
         this.remarks = remarks;
+    }
+
+    public String getContactPerson() {
+        return contactPerson;
+    }
+
+    public void setContactPerson(String contactPerson) {
+        this.contactPerson = contactPerson;
+    }
+
+    public String getContactDepartment() {
+        return contactDepartment;
+    }
+
+    public void setContactDepartment(String contactDepartment) {
+        this.contactDepartment = contactDepartment;
+    }
+
+    public String getVisitMatter() {
+        return visitMatter;
+    }
+
+    public void setVisitMatter(String visitMatter) {
+        this.visitMatter = visitMatter;
     }
 }
 

@@ -75,7 +75,13 @@ import {
   UserFilled,
   Box,
   DataBoard,
-  Collection
+  Collection,
+  Money,
+  ShoppingCart,
+  Opportunity,
+  Document,
+  Goods,
+  Files
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -96,7 +102,13 @@ const ICON_MAP = {
   'el-icon-user-solid': UserFilled,
   'el-icon-box': Box,
   'el-icon-data-board': DataBoard,
-  'el-icon-collection': Collection
+  'el-icon-collection': Collection,
+  'el-icon-money': Money,
+  'el-icon-shopping-cart': ShoppingCart,
+  'el-icon-opportunity': Opportunity,
+  'el-icon-document': Document,
+  'el-icon-goods': Goods,
+  'el-icon-files': Files
 }
 
 // 模块ID到路由路径的映射
@@ -108,7 +120,17 @@ const MODULE_PATH_MAP = {
   'm007': '/option-management',
   'm008': '/customer-management',
   'm009': '/team-management',
-  'm010': '/product-management'
+  'm010': '/product-management',
+  'm012': '/customer-visit-management',
+  'm013': '/project-opportunity-management',
+  'm014': '/product-inventory',
+  'm015': '/sales-quotation-management',
+  'm016': '/reduced-stock-management',
+  'm018': '/bidding-info-management',
+  'm019': '/price-book-management',
+  'm021': '/ar-plan',
+  'm022': '/ar-receipt',
+  'm023': '/ar-query'
 }
 
 // 获取图标组件

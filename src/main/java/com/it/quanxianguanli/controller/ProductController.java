@@ -218,5 +218,125 @@ public class ProductController {
             return Result.error(e.getMessage());
         }
     }
+
+    // 库存查询
+    @GetMapping("/inventory")
+    public Result<List<Product>> queryInventory(
+            @RequestParam(required = false) String drawingNumber,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Boolean isStagnant) {
+        List<Product> products = productService.queryInventory(drawingNumber, name, isStagnant);
+        return Result.success(products);
+    }
+
+    // 库存查询导出
+    @GetMapping("/inventory/export")
+    public void exportInventory(
+            @RequestParam(required = false) String drawingNumber,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Boolean isStagnant,
+            HttpServletResponse response) {
+        try {
+            List<Product> products = productService.queryInventory(drawingNumber, name, isStagnant);
+            
+            // 构建表头（列表展示字段：图号、名称、材料、数量、是否呆滞、预计交货期）
+            List<String> headers = new ArrayList<>();
+            headers.add("图号");
+            headers.add("名称");
+            headers.add("材料");
+            headers.add("数量");
+            headers.add("是否呆滞");
+            headers.add("预计交货期");
+            
+            // 构建数据
+            List<List<Object>> data = new ArrayList<>();
+            for (Product product : products) {
+                List<Object> row = new ArrayList<>();
+                row.add(product.getDrawingNumber());
+                row.add(product.getName());
+                row.add(product.getMaterial());
+                row.add(product.getQuantity());
+                row.add(product.getIsStagnant() != null && product.getIsStagnant() ? "是" : "否");
+                row.add(product.getExpectedDeliveryDate());
+                data.add(row);
+            }
+            
+            Workbook workbook = ExcelUtil.createWorkbook(headers, data);
+            ExcelUtil.exportToResponse(response, workbook, "库存查询列表.xlsx");
+        } catch (Exception e) {
+            throw new RuntimeException("导出失败：" + e.getMessage(), e);
+        }
+    }
+
+    // 降库产品查询
+    @GetMapping("/reduced-stock")
+    public Result<List<Product>> queryReducedStockProducts(
+            @RequestParam(required = false) String caliber,
+            @RequestParam(required = false) String motorPower,
+            @RequestParam(required = false) String flow,
+            @RequestParam(required = false) String head,
+            @RequestParam(required = false) String filterMaterial,
+            @RequestParam(required = false) String inletPressure,
+            @RequestParam(required = false) String outletPressure) {
+        List<Product> products = productService.queryReducedStockProducts(
+                caliber, motorPower, flow, head, filterMaterial, inletPressure, outletPressure);
+        return Result.success(products);
+    }
+
+    // 降库产品导出
+    @GetMapping("/reduced-stock/export")
+    public void exportReducedStockProducts(
+            @RequestParam(required = false) String caliber,
+            @RequestParam(required = false) String motorPower,
+            @RequestParam(required = false) String flow,
+            @RequestParam(required = false) String head,
+            @RequestParam(required = false) String filterMaterial,
+            @RequestParam(required = false) String inletPressure,
+            @RequestParam(required = false) String outletPressure,
+            HttpServletResponse response) {
+        try {
+            List<Product> products = productService.queryReducedStockProducts(
+                    caliber, motorPower, flow, head, filterMaterial, inletPressure, outletPressure);
+            
+            // 构建表头（列表展示字段：图号、名称、材料、数量、库龄、是否呆滞）
+            List<String> headers = new ArrayList<>();
+            headers.add("图号");
+            headers.add("名称");
+            headers.add("材料");
+            headers.add("数量");
+            headers.add("库龄");
+            headers.add("是否呆滞");
+            
+            // 构建数据
+            List<List<Object>> data = new ArrayList<>();
+            for (Product product : products) {
+                List<Object> row = new ArrayList<>();
+                row.add(product.getDrawingNumber());
+                row.add(product.getName());
+                row.add(product.getMaterial());
+                row.add(product.getQuantity());
+                row.add(product.getStorageAge());
+                row.add(product.getIsStagnant() != null && product.getIsStagnant() ? "是" : "否");
+                data.add(row);
+            }
+            
+            Workbook workbook = ExcelUtil.createWorkbook(headers, data);
+            ExcelUtil.exportToResponse(response, workbook, "降库产品列表.xlsx");
+        } catch (Exception e) {
+            throw new RuntimeException("导出失败：" + e.getMessage(), e);
+        }
+    }
+
+    // 标记降库产品
+    @PostMapping("/{id}/mark-reduced-stock")
+    public Result<Void> markReducedStock(@PathVariable String id, @RequestBody java.util.Map<String, String> request) {
+        try {
+            String contractId = request.get("contractId");
+            productService.markReducedStock(id, contractId);
+            return Result.success("标记降库成功", null);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }
 

@@ -175,5 +175,52 @@ public class ExcelUtil {
             workbook.close();
         }
     }
+    
+    /**
+     * 导出价格本数据到Excel
+     */
+    public static void exportPriceBooks(List<?> priceBooks, OutputStream outputStream) throws IOException {
+        List<String> headers = List.of(
+                "产品类别", "产品名称", "型号", "参数", "部门", "单价", "备注"
+        );
+        
+        List<List<Object>> data = new ArrayList<>();
+        for (Object obj : priceBooks) {
+            try {
+                java.lang.reflect.Method getProductType = obj.getClass().getMethod("getProductType");
+                java.lang.reflect.Method getProductName = obj.getClass().getMethod("getProductName");
+                java.lang.reflect.Method getModel = obj.getClass().getMethod("getModel");
+                java.lang.reflect.Method getParameters = obj.getClass().getMethod("getParameters");
+                java.lang.reflect.Method getDepartment = obj.getClass().getMethod("getDepartment");
+                java.lang.reflect.Method getUnitPrice = obj.getClass().getMethod("getUnitPrice");
+                java.lang.reflect.Method getRemarks = obj.getClass().getMethod("getRemarks");
+                
+                String productType = (String) getProductType.invoke(obj);
+                String productTypeLabel = switch (productType) {
+                    case "SINGLE" -> "单泵（单体设备）";
+                    case "COMPLETE" -> "成套设备";
+                    case "SPARE" -> "备品备件";
+                    default -> productType;
+                };
+                
+                List<Object> row = List.of(
+                        productTypeLabel,
+                        getProductName.invoke(obj),
+                        getModel.invoke(obj),
+                        getParameters.invoke(obj),
+                        getDepartment.invoke(obj),
+                        getUnitPrice.invoke(obj),
+                        getRemarks.invoke(obj)
+                );
+                data.add(row);
+            } catch (Exception e) {
+                // 跳过无法处理的行
+            }
+        }
+        
+        Workbook workbook = createWorkbook(headers, data);
+        workbook.write(outputStream);
+        workbook.close();
+    }
 }
 

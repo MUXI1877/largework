@@ -58,3 +58,25 @@ export const uploadProductAttachment = (file, productId) => {
   })
 }
 
+// 库存查询
+export const queryInventory = (params) => {
+  return request.get('/product/inventory', { params })
+}
+
+export const exportInventory = (params) => {
+  return request.get('/product/inventory/export', { params, responseType: 'blob' })
+}
+
+// 降库管理
+export const queryReducedStockProducts = (params) => {
+  return request.get('/product/reduced-stock', { params })
+}
+
+export const exportReducedStockProducts = (params) => {
+  return request.get('/product/reduced-stock/export', { params, responseType: 'blob' })
+}
+
+export const markReducedStock = (id, data) => {
+  return request.post(`/product/${id}/mark-reduced-stock`, data)
+}
+

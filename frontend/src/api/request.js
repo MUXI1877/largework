@@ -2,8 +2,11 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '../router'
 
+// 直接指向后端服务，避免在非 Vite 代理场景下出现 404
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'
+
 const request = axios.create({
-    baseURL: '/api',
+    baseURL: API_BASE,
     timeout: 10000
 })
 
@@ -41,13 +44,17 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
     response => {
+        // 部分接口直接返回数据（Page、List 等），没有 code 字段
         const res = response.data
-        if (res.code === 200) {
-            return res
-        } else {
+        if (res && typeof res.code !== 'undefined') {
+            if (res.code === 200) {
+                return res
+            }
             ElMessage.error(res.message || '请求失败')
             return Promise.reject(new Error(res.message || '请求失败'))
         }
+        // 无 code 字段（如 Spring Data Page），包装成 { data: res } 以兼容现有调用
+        return { data: res }
     },
     error => {
         if (error.response && error.response.status === 401) {

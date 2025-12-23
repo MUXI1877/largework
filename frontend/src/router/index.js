@@ -75,6 +75,66 @@ const routes = [
         name: 'ProductManagement',
         component: () => import('../views/ProductManagement.vue'),
         meta: { title: '产品管理', moduleId: 'm010' }
+      },
+      {
+        path: '/customer-visit-management',
+        name: 'CustomerVisitManagement',
+        component: () => import('../views/CustomerVisitManagement.vue'),
+        meta: { title: '客户来访管理', moduleId: 'm012' }
+      },
+      {
+        path: '/project-opportunity-management',
+        name: 'ProjectOpportunityManagement',
+        component: () => import('../views/ProjectOpportunityManagement.vue'),
+        meta: { title: '销售机会管理', moduleId: 'm013' }
+      },
+      {
+        path: '/product-inventory',
+        name: 'ProductInventory',
+        component: () => import('../views/ProductInventory.vue'),
+        meta: { title: '销售库存查询', moduleId: 'm014' }
+      },
+      {
+        path: '/sales-quotation-management',
+        name: 'SalesQuotationManagement',
+        component: () => import('../views/SalesQuotationManagement.vue'),
+        meta: { title: '销售报价管理', moduleId: 'm015' }
+      },
+      {
+        path: '/reduced-stock-management',
+        name: 'ReducedStockManagement',
+        component: () => import('../views/ReducedStockManagement.vue'),
+        meta: { title: '销售降库管理', moduleId: 'm016' }
+      },
+      {
+        path: '/bidding-info-management',
+        name: 'BiddingInfoManagement',
+        component: () => import('../views/BiddingInfoManagement.vue'),
+        meta: { title: '投标管理', moduleId: 'm018' }
+      },
+      {
+        path: '/price-book-management',
+        name: 'PriceBookManagement',
+        component: () => import('../views/PriceBookManagement.vue'),
+        meta: { title: '价格本管理', moduleId: 'm019' }
+      },
+      {
+        path: '/ar-plan',
+        name: 'ReceivablePlan',
+        component: () => import('../views/ReceivablePlan.vue'),
+        meta: { title: '应收账计划', moduleId: 'm021' }
+      },
+      {
+        path: '/ar-receipt',
+        name: 'ReceivableReceipt',
+        component: () => import('../views/ReceivableReceipt.vue'),
+        meta: { title: '回款登记', moduleId: 'm022' }
+      },
+      {
+        path: '/ar-query',
+        name: 'ReceivableQuery',
+        component: () => import('../views/ReceivableQuery.vue'),
+        meta: { title: '应收账查询', moduleId: 'm023' }
       }
     ]
   }

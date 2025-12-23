@@ -5,9 +5,12 @@ import com.it.quanxianguanli.entity.ProductAttachment;
 import com.it.quanxianguanli.repository.ProductRepository;
 import com.it.quanxianguanli.repository.ProductAttachmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.criteria.Predicate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,6 +75,99 @@ public class ProductService {
     @Transactional
     public List<Product> batchImport(List<Product> products) {
         return productRepository.saveAll(products);
+    }
+
+    // 库存查询（排除已标记降库的产品）
+    public List<Product> queryInventory(String drawingNumber, String name, Boolean isStagnant) {
+        Specification<Product> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            // 排除已标记降库的产品
+            predicates.add(cb.or(
+                cb.isNull(root.get("isReducedStock")),
+                cb.equal(root.get("isReducedStock"), false)
+            ));
+            
+            if (drawingNumber != null && !drawingNumber.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("drawingNumber")), "%" + drawingNumber.toLowerCase() + "%"));
+            }
+            
+            if (name != null && !name.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
+            }
+            
+            if (isStagnant != null) {
+                predicates.add(cb.equal(root.get("isStagnant"), isStagnant));
+            }
+            
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        
+        return productRepository.findAll(spec);
+    }
+
+    // 降库产品查询（支持多条件筛选，排除已标记降库的产品）
+    public List<Product> queryReducedStockProducts(String caliber, String motorPower, String flow, 
+                                                    String head, String filterMaterial, 
+                                                    String inletPressure, String outletPressure) {
+        Specification<Product> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            // 只查询呆滞产品
+            predicates.add(cb.equal(root.get("isStagnant"), true));
+            
+            // 排除已标记降库的产品
+            predicates.add(cb.or(
+                cb.isNull(root.get("isReducedStock")),
+                cb.equal(root.get("isReducedStock"), false)
+            ));
+            
+            if (caliber != null && !caliber.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("caliber")), "%" + caliber.toLowerCase() + "%"));
+            }
+            
+            if (motorPower != null && !motorPower.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("motorPower")), "%" + motorPower.toLowerCase() + "%"));
+            }
+            
+            if (flow != null && !flow.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("flow")), "%" + flow.toLowerCase() + "%"));
+            }
+            
+            if (head != null && !head.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("head")), "%" + head.toLowerCase() + "%"));
+            }
+            
+            if (filterMaterial != null && !filterMaterial.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("filterMaterial")), "%" + filterMaterial.toLowerCase() + "%"));
+            }
+            
+            if (inletPressure != null && !inletPressure.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("inletPressure")), "%" + inletPressure.toLowerCase() + "%"));
+            }
+            
+            if (outletPressure != null && !outletPressure.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("outletPressure")), "%" + outletPressure.toLowerCase() + "%"));
+            }
+            
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        
+        return productRepository.findAll(spec);
+    }
+
+    // 标记降库产品
+    @Transactional
+    public void markReducedStock(String productId, String contractId) {
+        Optional<Product> opt = productRepository.findById(productId);
+        if (opt.isPresent()) {
+            Product product = opt.get();
+            product.setIsReducedStock(true);
+            product.setContractId(contractId);
+            productRepository.save(product);
+        } else {
+            throw new RuntimeException("产品不存在");
+        }
     }
 }
 
