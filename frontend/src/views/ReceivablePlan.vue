@@ -5,7 +5,13 @@
         <div class="card-header">
           <span>应收账计划</span>
           <div>
-            <el-button type="primary" @click="openPlanDialog()">新增计划</el-button>
+            <el-button 
+              v-permission="{ moduleId: 'm021', action: 'add' }"
+              type="primary" 
+              @click="openPlanDialog()"
+            >
+              新增计划
+            </el-button>
             <el-button type="success" @click="exportPlans">导出</el-button>
             <el-button @click="refresh">刷新</el-button>
           </div>
@@ -29,7 +35,13 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleQuery">查询</el-button>
+          <el-button 
+            v-permission="{ moduleId: 'm021', action: 'read' }"
+            type="primary" 
+            @click="handleQuery"
+          >
+            查询
+          </el-button>
           <el-button @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
@@ -53,9 +65,24 @@
         <el-table-column prop="owner" label="责任人" width="120" />
         <el-table-column prop="status" label="状态" width="100" />
         <el-table-column prop="remarks" label="备注" min-width="160" show-overflow-tooltip />
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
-            <el-button type="warning" size="small" @click="openPlanDialog(scope.row)">修改</el-button>
+            <el-button 
+              v-permission="{ moduleId: 'm021', action: 'update' }"
+              type="warning" 
+              size="small" 
+              @click="openPlanDialog(scope.row)"
+            >
+              修改
+            </el-button>
+            <el-button 
+              v-permission="{ moduleId: 'm021', action: 'delete' }"
+              type="danger" 
+              size="small" 
+              @click="handleDelete(scope.row)"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -106,14 +133,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getReceivablePlans,
   createReceivablePlan,
   updateReceivablePlan,
+  deleteReceivablePlan,
   exportReceivablePlans
 } from '../api/receivable'
+import { canRead, loadPermissions } from '../utils/permission'
 
 const loading = ref(false)
 const list = ref([])
@@ -209,7 +238,7 @@ const handlePageChange = (val) => {
 const openPlanDialog = (row) => {
   planDialogTitle.value = row ? '修改计划' : '新增计划'
   Object.assign(planForm, {
-    id: row?.id || '',
+    id: row?.id || null,
     contractCode: row?.contractCode || '',
     contractName: row?.contractName || '',
     paymentStageName: row?.paymentStageName || '',
@@ -232,10 +261,12 @@ const savePlan = async () => {
       return
     }
     const payload = { ...planForm }
-    if (planForm.id) {
-      await updateReceivablePlan(planForm.id, payload)
-    } else {
+    // 新增时，确保id为null或undefined，不发送id字段
+    if (!planForm.id || planForm.id === '') {
+      delete payload.id
       await createReceivablePlan(payload)
+    } else {
+      await updateReceivablePlan(planForm.id, payload)
     }
     ElMessage.success('保存成功')
     planDialogVisible.value = false
@@ -243,6 +274,24 @@ const savePlan = async () => {
   } catch (e) {
     ElMessage.error(e.message || '保存失败')
   }
+}
+
+const handleDelete = (row) => {
+  ElMessageBox.confirm('确定要删除该应收账计划记录吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await deleteReceivablePlan(row.id)
+      ElMessage.success('删除成功')
+      loadData()
+    } catch (e) {
+      ElMessage.error(e.message || e.msg || '删除失败')
+    }
+  }).catch(() => {
+    // 用户取消删除
+  })
 }
 
 const exportPlans = async () => {
@@ -264,8 +313,13 @@ const exportPlans = async () => {
   }
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadPermissions()
+  if (canRead('m021')) {
+    loadData()
+  } else {
+    ElMessage.warning('您没有查看应收账计划的权限')
+  }
 })
 </script>
 

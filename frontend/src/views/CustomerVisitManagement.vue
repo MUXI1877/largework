@@ -5,8 +5,8 @@
         <div class="card-header">
           <span>客户来访管理</span>
           <div>
-            <el-button type="primary" @click="handleAdd">新增</el-button>
-            <el-button type="success" @click="handleExport">导出</el-button>
+            <el-button type="primary" v-permission="{ moduleId: 'm012', action: 'add' }" @click="handleAdd">新增</el-button>
+            <el-button type="success" v-permission="{ moduleId: 'm012', action: 'read' }" @click="handleExport">导出</el-button>
           </div>
         </div>
       </template>
@@ -48,8 +48,8 @@
         <el-table-column prop="remarks" label="备注" width="200" show-overflow-tooltip />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="scope">
-            <el-button type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="warning" size="small" v-permission="{ moduleId: 'm012', action: 'update' }" @click="handleEdit(scope.row)">修改</el-button>
+            <el-button type="danger" size="small" v-permission="{ moduleId: 'm012', action: 'update' }" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -153,6 +153,7 @@ import {
   exportCustomerVisits
 } from '../api/customerVisit'
 import { getCustomerList } from '../api/customer'
+import { canRead, loadPermissions } from '../utils/permission'
 
 const loading = ref(false)
 const visitList = ref([])
@@ -330,7 +331,8 @@ const handleExport = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadPermissions()
   loadCustomers()
   loadData()
 })

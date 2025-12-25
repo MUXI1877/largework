@@ -68,7 +68,14 @@ public class ReceivableQueryService {
                     .orElse(null);
 
             ReceivableSummary dto = new ReceivableSummary();
-            dto.setPlanId(plan.getId());
+            // 生成应收账编号：合同号-款项阶段（如果款项阶段不为空）
+            String receivableNo = plan.getContractCode();
+            if (plan.getPaymentStageName() != null && !plan.getPaymentStageName().trim().isEmpty()) {
+                receivableNo = plan.getContractCode() + "-" + plan.getPaymentStageName();
+            } else if (plan.getPaymentStage() != null && !plan.getPaymentStage().trim().isEmpty()) {
+                receivableNo = plan.getContractCode() + "-" + plan.getPaymentStage();
+            }
+            dto.setPlanId(receivableNo);
             dto.setContractCode(plan.getContractCode());
             dto.setContractName(plan.getContractName());
             dto.setItem(plan.getPaymentStageName());

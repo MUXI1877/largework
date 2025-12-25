@@ -13,6 +13,8 @@ public interface ReceivableReceiptRepository extends JpaRepository<ReceivableRec
 
     List<ReceivableReceipt> findByContractCodeOrderByReceiveDateAsc(String contractCode);
 
+    List<ReceivableReceipt> findByContractCode(String contractCode);
+
     @Query("select coalesce(sum(r.receiveAmount),0) from ReceivableReceipt r where r.contractCode = :contractCode")
     BigDecimal sumReceivedByContract(@Param("contractCode") String contractCode);
 }

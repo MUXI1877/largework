@@ -135,6 +135,18 @@ const routes = [
         name: 'ReceivableQuery',
         component: () => import('../views/ReceivableQuery.vue'),
         meta: { title: '应收账查询', moduleId: 'm023' }
+      },
+      {
+        path: '/destination-management',
+        name: 'DestinationManagement',
+        component: () => import('../views/daily/DestinationManagement.vue'),
+        meta: { title: '去向管理', moduleId: 'm024' }
+      },
+      {
+        path: '/weekly-report-management',
+        name: 'WeeklyReportManagement',
+        component: () => import('../views/daily/WeeklyReportManagement.vue'),
+        meta: { title: '周报管理', moduleId: 'm025' }
       }
     ]
   }

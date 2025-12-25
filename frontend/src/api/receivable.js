@@ -25,6 +25,13 @@ export function updateReceivablePlan(id, data) {
   })
 }
 
+export function deleteReceivablePlan(id) {
+  return request({
+    url: `/receivable-plan/${id}`,
+    method: 'delete'
+  })
+}
+
 export function exportReceivablePlans(params) {
   return request({
     url: '/receivable-plan/export',
@@ -56,6 +63,13 @@ export function updateReceiptRemark(id, data) {
     url: `/receivable-receipt/${id}/remark`,
     method: 'put',
     data
+  })
+}
+
+export function deleteReceivableReceipt(id) {
+  return request({
+    url: `/receivable-receipt/${id}`,
+    method: 'delete'
   })
 }
 

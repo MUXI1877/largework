@@ -8,7 +8,9 @@
             <div class="card-header">
               <span>销售片区管理</span>
               <div>
-                <el-button type="primary" @click="handleAddRegion">新增</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm009', action: 'add' }"
+                  type="primary" @click="handleAddRegion">新增</el-button>
                 <el-button type="success" @click="handleExportRegion">导出</el-button>
               </div>
             </div>
@@ -22,8 +24,12 @@
             <el-table-column prop="remarks" label="备注" />
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="scope">
-                <el-button type="warning" size="small" @click="handleEditRegion(scope.row)">修改</el-button>
-                <el-button type="danger" size="small" @click="handleDeleteRegion(scope.row)">删除</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm009', action: 'update' }"
+                  type="warning" size="small" @click="handleEditRegion(scope.row)">修改</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm009', action: 'update' }"
+                  type="danger" size="small" @click="handleDeleteRegion(scope.row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -37,7 +43,9 @@
             <div class="card-header">
               <span>营销人员管理</span>
               <div>
-                <el-button type="primary" @click="handleAddPerson">新增</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm009', action: 'add' }"
+                  type="primary" @click="handleAddPerson">新增</el-button>
                 <el-button type="success" @click="handleExportPerson">导出</el-button>
               </div>
             </div>
@@ -55,7 +63,9 @@
               </el-select>
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" @click="handleQueryPerson">查询</el-button>
+              <el-button 
+                v-permission="{ moduleId: 'm009', action: 'read' }"
+                type="primary" @click="handleQueryPerson">查询</el-button>
               <el-button @click="handleResetPerson">重置</el-button>
             </el-form-item>
           </el-form>
@@ -70,8 +80,12 @@
             <el-table-column prop="position" label="职务" />
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="scope">
-                <el-button type="warning" size="small" @click="handleEditPerson(scope.row)">修改</el-button>
-                <el-button type="danger" size="small" @click="handleDeletePerson(scope.row)">删除</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm009', action: 'update' }"
+                  type="warning" size="small" @click="handleEditPerson(scope.row)">修改</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm009', action: 'update' }"
+                  type="danger" size="small" @click="handleDeletePerson(scope.row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -237,6 +251,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { canRead, loadPermissions } from '../utils/permission'
 import {
   getSalesRegionList,
   saveSalesRegion,
@@ -536,9 +551,14 @@ const handlePersonDialogClose = () => {
   personFormRef.value?.resetFields()
 }
 
-onMounted(() => {
-  loadRegions()
-  loadPersons()
+onMounted(async () => {
+  await loadPermissions()
+  if (canRead('m009')) {
+    loadRegions()
+    loadPersons()
+  } else {
+    ElMessage.warning('您没有查看团队信息管理的权限')
+  }
 })
 </script>
 

@@ -80,6 +80,7 @@ import { ElMessage } from 'element-plus'
 import { getRoleList } from '../api/role'
 import { getModuleTree } from '../api/module'
 import { getPermissionsByRole, savePermission, bulkSavePermission, configurePermissionsForChildren } from '../api/permission'
+import { clearPermissionCache } from '../utils/permission'
 
 const roleList = ref([])
 const moduleTree = ref([])
@@ -175,6 +176,8 @@ const saveCurrentPermission = async () => {
   }
   permissionForm.roleId = selectedRoleId.value
   await savePermission(permissionForm)
+  // 清除权限缓存，使权限修改立即生效
+  clearPermissionCache()
   // 重新加载当前角色权限，保持数据同步
   await handleRoleChange()
 }
@@ -224,6 +227,9 @@ const applyToChildren = async () => {
     }
 
     await configurePermissionsForChildren(configData)
+    
+    // 清除权限缓存，使权限修改立即生效
+    clearPermissionCache()
     
     // 更新本地权限映射
     const base = {
@@ -358,6 +364,9 @@ const saveAllChanges = async () => {
     // 后端批量保存，避免频繁请求遗漏
     await bulkSavePermission(changes)
 
+    // 清除权限缓存，使权限修改立即生效
+    clearPermissionCache()
+
     pendingChanges.value.clear()  // 清空待保存列表
     ElMessage.success(`成功保存 ${changes.length} 个模块的权限配置`)
 
@@ -377,19 +386,86 @@ const handleSavePermission = async () => {
     return
   }
 
-  if (pendingChanges.value.size === 0) {
-    // 如果没有待保存的批量修改，保存当前表单
+  if (!selectedModuleId.value) {
+    ElMessage.warning('请先选择模块')
+    return
+  }
+
+  // 确保表单数据同步到待保存列表
+  if (pendingChanges.value.has(selectedModuleId.value)) {
+    // 如果当前模块在待保存列表中，更新它
+    const existing = pendingChanges.value.get(selectedModuleId.value)
+    pendingChanges.value.set(selectedModuleId.value, {
+      ...existing,
+      ...permissionForm,
+      roleId: selectedRoleId.value,
+      moduleId: selectedModuleId.value
+    })
+  } else {
+    // 如果当前模块不在待保存列表中，添加到列表
+    const permission = permissionMap.value[selectedModuleId.value]
+    pendingChanges.value.set(selectedModuleId.value, {
+      ...permissionForm,
+      roleId: selectedRoleId.value,
+      moduleId: selectedModuleId.value,
+      id: permission ? permission.id : undefined
+    })
+  }
+
+  // 确保布尔字段有值
+  const permissionData = pendingChanges.value.get(selectedModuleId.value)
+  if (permissionData) {
+    if (permissionData.canRead === undefined) permissionData.canRead = false
+    if (permissionData.canAdd === undefined) permissionData.canAdd = false
+    if (permissionData.canUpdate === undefined) permissionData.canUpdate = false
+    if (permissionData.canSee === undefined) permissionData.canSee = false
+    // 移除undefined的id字段
+    if (permissionData.id === undefined) {
+      delete permissionData.id
+    }
+  }
+
+  // 判断是单独保存还是批量保存
+  // 如果只有当前模块在待保存列表中，单独保存；否则批量保存
+  const hasOtherPendingChanges = pendingChanges.value.size > 1 || 
+    (pendingChanges.value.size === 1 && !pendingChanges.value.has(selectedModuleId.value))
+
+  if (hasOtherPendingChanges) {
+    // 如果有其他待保存的修改，执行批量保存
+    await saveAllChanges()
+  } else {
+    // 只保存当前模块（单独保存）
     try {
-      permissionForm.roleId = selectedRoleId.value
-      await savePermission(permissionForm)
+      // 使用待保存列表中的数据，确保包含所有字段
+      const saveData = permissionData || {
+        ...permissionForm,
+        roleId: selectedRoleId.value,
+        moduleId: selectedModuleId.value
+      }
+      
+      // 确保布尔字段有值
+      if (saveData.canRead === undefined) saveData.canRead = false
+      if (saveData.canAdd === undefined) saveData.canAdd = false
+      if (saveData.canUpdate === undefined) saveData.canUpdate = false
+      if (saveData.canSee === undefined) saveData.canSee = false
+      // 移除undefined的id字段
+      if (saveData.id === undefined) {
+        delete saveData.id
+      }
+      
+      console.log('保存权限数据:', saveData)
+      await savePermission(saveData)
+      // 清除权限缓存，使权限修改立即生效
+      clearPermissionCache()
       ElMessage.success('权限保存成功')
+      // 从待保存列表中移除（如果存在）
+      pendingChanges.value.delete(selectedModuleId.value)
+      // 重新加载当前角色权限，保持数据同步
       await handleRoleChange()
     } catch (error) {
-      ElMessage.error('权限保存失败')
+      console.error('保存权限失败:', error)
+      ElMessage.error(error.response?.data?.message || error.message || '权限保存失败')
     }
-  } else {
-    // 如果有待保存的批量修改，执行批量保存
-    await saveAllChanges()
   }
 }
 

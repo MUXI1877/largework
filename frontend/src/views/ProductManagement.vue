@@ -8,7 +8,9 @@
             <div class="card-header">
               <span>单体设备管理</span>
               <div>
-                <el-button type="primary" @click="handleAdd('SINGLE')">新增</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm010', action: 'add' }"
+                  type="primary" @click="handleAdd('SINGLE')">新增</el-button>
                 <el-button type="success" @click="handleImport('SINGLE')">Excel导入</el-button>
                 <el-button type="success" @click="handleExport('SINGLE')">导出</el-button>
               </div>
@@ -33,8 +35,12 @@
             <el-table-column label="操作" width="250" fixed="right">
               <template #default="scope">
                 <el-button type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
-                <el-button type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
-                <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm010', action: 'update' }"
+                  type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm010', action: 'update' }"
+                  type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -73,8 +79,12 @@
             <el-table-column label="操作" width="250" fixed="right">
               <template #default="scope">
                 <el-button type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
-                <el-button type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
-                <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm010', action: 'update' }"
+                  type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm010', action: 'update' }"
+                  type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -112,8 +122,12 @@
             <el-table-column label="操作" width="250" fixed="right">
               <template #default="scope">
                 <el-button type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
-                <el-button type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
-                <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm010', action: 'update' }"
+                  type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
+                <el-button 
+                  v-permission="{ moduleId: 'm010', action: 'update' }"
+                  type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -245,6 +259,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { canRead, loadPermissions } from '../utils/permission'
 import {
   getProductList,
   saveProduct,
@@ -520,8 +535,13 @@ const handleDialogClose = () => {
   formRef.value?.resetFields()
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadPermissions()
+  if (canRead('m010')) {
+    loadData()
+  } else {
+    ElMessage.warning('您没有查看产品管理的权限')
+  }
 })
 </script>
 

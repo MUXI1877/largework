@@ -5,8 +5,8 @@
         <div class="card-header">
           <span>销售报价管理</span>
           <div>
-            <el-button type="primary" @click="handleAdd">新增</el-button>
-            <el-button type="success" @click="handleExport">导出</el-button>
+            <el-button type="primary" v-permission="{ moduleId: 'm015', action: 'add' }" @click="handleAdd">新增</el-button>
+            <el-button type="success" v-permission="{ moduleId: 'm015', action: 'read' }" @click="handleExport">导出</el-button>
           </div>
         </div>
       </template>
@@ -50,10 +50,10 @@
         <el-table-column prop="remarks" label="备注" width="200" show-overflow-tooltip />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
-            <el-button type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
-            <el-button type="success" size="small" @click="handlePrint(scope.row)">打印</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="primary" size="small" v-permission="{ moduleId: 'm015', action: 'read' }" @click="handleView(scope.row)">查看</el-button>
+            <el-button type="warning" size="small" v-permission="{ moduleId: 'm015', action: 'update' }" @click="handleEdit(scope.row)">修改</el-button>
+            <el-button type="success" size="small" v-permission="{ moduleId: 'm015', action: 'read' }" @click="handlePrint(scope.row)">打印</el-button>
+            <el-button type="danger" size="small" v-permission="{ moduleId: 'm015', action: 'update' }" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -292,6 +292,7 @@ import {
 } from '../api/salesQuotation'
 import { getProjectOpportunityList } from '../api/projectOpportunity'
 import { queryInventory } from '../api/product'
+import { canRead, loadPermissions } from '../utils/permission'
 
 const loading = ref(false)
 const quotationList = ref([])
@@ -587,7 +588,8 @@ const handleExport = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadPermissions()
   loadOpportunities()
   loadData()
 })

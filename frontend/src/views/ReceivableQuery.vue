@@ -19,13 +19,19 @@
           <el-input v-model="queryForm.companyName" placeholder="请输入公司名称" style="width: 200px" clearable />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleQuery">查询</el-button>
+          <el-button 
+            v-permission="{ moduleId: 'm023', action: 'read' }"
+            type="primary" 
+            @click="handleQuery"
+          >
+            查询
+          </el-button>
           <el-button @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
 
       <el-table :data="list" border style="width: 100%" v-loading="loading">
-        <el-table-column prop="planId" label="应收账编号" width="180" />
+        <el-table-column prop="planId" label="应收账编号" width="220" show-overflow-tooltip />
         <el-table-column prop="contractCode" label="合同号" width="150" />
         <el-table-column prop="contractName" label="合同名称" width="200" show-overflow-tooltip />
         <el-table-column prop="companyName" label="公司名称" width="180" show-overflow-tooltip />
@@ -70,6 +76,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getReceivableSummary, exportReceivableSummary } from '../api/receivable'
+import { canRead, loadPermissions } from '../utils/permission'
 
 const loading = ref(false)
 const list = ref([])
@@ -154,8 +161,13 @@ const exportSummaryList = async () => {
   }
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadPermissions()
+  if (canRead('m023')) {
+    loadData()
+  } else {
+    ElMessage.warning('您没有查看应收账查询的权限')
+  }
 })
 </script>
 

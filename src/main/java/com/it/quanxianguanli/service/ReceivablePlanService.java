@@ -63,6 +63,10 @@ public class ReceivablePlanService {
         return planRepository.findAll(spec, pageable);
     }
 
+    public List<ReceivablePlan> findByContractCodeOrderByDueDateAscCreateTimeAsc(String contractCode) {
+        return planRepository.findByContractCodeOrderByDueDateAscCreateTimeAsc(contractCode);
+    }
+
     /**
      * 核销回款到计划，按应付时间顺序分配
      */
@@ -93,7 +97,12 @@ public class ReceivablePlanService {
         }
     }
 
-    private void updateStatus(ReceivablePlan plan) {
+    @Transactional
+    public void deleteById(String id) {
+        planRepository.deleteById(id);
+    }
+
+    public void updateStatus(ReceivablePlan plan) {
         BigDecimal due = plan.getDueAmount() == null ? BigDecimal.ZERO : plan.getDueAmount();
         BigDecimal paid = plan.getPaidAmount() == null ? BigDecimal.ZERO : plan.getPaidAmount();
         if (paid.compareTo(BigDecimal.ZERO) <= 0) {

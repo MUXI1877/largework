@@ -5,7 +5,9 @@
         <div class="card-header">
           <span>客户管理</span>
           <div>
-            <el-button type="primary" @click="handleAdd">新增</el-button>
+            <el-button 
+              v-permission="{ moduleId: 'm008', action: 'add' }"
+              type="primary" @click="handleAdd">新增</el-button>
             <el-button type="success" @click="handleExport">导出</el-button>
           </div>
         </div>
@@ -20,7 +22,9 @@
           <el-input v-model="queryForm.region" placeholder="请输入所属区域" clearable />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleQuery">查询</el-button>
+          <el-button 
+            v-permission="{ moduleId: 'm008', action: 'read' }"
+            type="primary" @click="handleQuery">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
@@ -37,8 +41,12 @@
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
             <el-button type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
-            <el-button type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button 
+              v-permission="{ moduleId: 'm008', action: 'update' }"
+              type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
+            <el-button 
+              v-permission="{ moduleId: 'm008', action: 'update' }"
+              type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -302,6 +310,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { canRead, loadPermissions } from '../utils/permission'
 import {
   getCustomerList,
   saveCustomer,
@@ -585,8 +594,13 @@ const handleDeleteKeyPerson = async (row) => {
   })
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadPermissions()
+  if (canRead('m008')) {
+    loadData()
+  } else {
+    ElMessage.warning('您没有查看客户管理的权限')
+  }
 })
 </script>
 

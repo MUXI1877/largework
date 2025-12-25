@@ -5,8 +5,8 @@
         <div class="card-header">
           <span>投标管理</span>
           <div>
-            <el-button type="primary" @click="handleAdd">新增</el-button>
-            <el-button type="success" @click="handleExport">导出</el-button>
+            <el-button type="primary" v-permission="{ moduleId: 'm018', action: 'add' }" @click="handleAdd">新增</el-button>
+            <el-button type="success" v-permission="{ moduleId: 'm018', action: 'read' }" @click="handleExport">导出</el-button>
           </div>
         </div>
       </template>
@@ -63,10 +63,10 @@
         <el-table-column prop="biddingStatus" label="投标状态" width="120" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
-            <el-button type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
-            <el-button type="success" size="small" @click="handleSummary(scope.row)">总结</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="primary" size="small" v-permission="{ moduleId: 'm018', action: 'read' }" @click="handleView(scope.row)">查看</el-button>
+            <el-button type="warning" size="small" v-permission="{ moduleId: 'm018', action: 'update' }" @click="handleEdit(scope.row)">修改</el-button>
+            <el-button type="success" size="small" v-permission="{ moduleId: 'm018', action: 'update' }" @click="handleSummary(scope.row)">总结</el-button>
+            <el-button type="danger" size="small" v-permission="{ moduleId: 'm018', action: 'update' }" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -452,7 +452,8 @@ const handleExport = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadPermissions()
   loadOpportunities()
   loadData()
 })

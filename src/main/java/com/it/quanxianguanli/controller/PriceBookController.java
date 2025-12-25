@@ -4,9 +4,12 @@ import com.it.quanxianguanli.dto.Result;
 import com.it.quanxianguanli.entity.PriceBook;
 import com.it.quanxianguanli.entity.PriceBookLog;
 import com.it.quanxianguanli.entity.Product;
+import com.it.quanxianguanli.entity.SysPermission;
 import com.it.quanxianguanli.service.PriceBookService;
 import com.it.quanxianguanli.service.ProductService;
+import com.it.quanxianguanli.service.SysPermissionService;
 import com.it.quanxianguanli.util.ExcelUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -21,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 
 @RestController
 @RequestMapping("/api/price-book")
@@ -31,6 +36,35 @@ public class PriceBookController {
     
     @Autowired
     private ProductService productService;
+
+    @Autowired
+    private SysPermissionService permissionService;
+
+    private static final Set<String> ADMIN_ROLES = Set.of("r001", "r002");
+    private static final String MODULE_PRICE_BOOK = "m019";
+
+    private boolean isAdmin(HttpServletRequest request) {
+        Object roleId = request.getAttribute("roleId");
+        return roleId != null && ADMIN_ROLES.contains(roleId.toString());
+    }
+
+    private boolean hasPermission(HttpServletRequest request, String moduleId,
+                                  Predicate<SysPermission> predicate) {
+        if (isAdmin(request)) {
+            return true;
+        }
+        Object roleId = request.getAttribute("roleId");
+        if (roleId == null) {
+            return false;
+        }
+        return permissionService.findByRoleIdAndModuleId(roleId.toString(), moduleId)
+                .map(predicate::test)
+                .orElse(false);
+    }
+
+    private <T> Result<T> forbidden() {
+        return Result.error(403, "无权限操作");
+    }
     
     /**
      * 分页查询价格本
@@ -42,7 +76,11 @@ public class PriceBookController {
             @RequestParam(required = false) String productName,
             @RequestParam(required = false) String model,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         try {
             Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updateTime"));
             Page<PriceBook> priceBooks = priceBookService.findPriceBooks(
@@ -57,7 +95,10 @@ public class PriceBookController {
      * 根据ID查询价格本
      */
     @GetMapping("/{id}")
-    public Result<PriceBook> getPriceBookById(@PathVariable String id) {
+    public Result<PriceBook> getPriceBookById(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         try {
             return priceBookService.findById(id)
                     .map(Result::success)
@@ -74,7 +115,11 @@ public class PriceBookController {
     @GetMapping("/price")
     public Result<Map<String, Object>> getPrice(
             @RequestParam String productId,
-            @RequestParam String department) {
+            @RequestParam String department,
+            HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         try {
             java.math.BigDecimal price = priceBookService.getPriceByProductIdAndDepartment(productId, department);
             Map<String, Object> result = new HashMap<>();
@@ -91,9 +136,12 @@ public class PriceBookController {
     @PostMapping
     public Result<PriceBook> createPriceBook(@RequestBody PriceBook priceBook,
                                              @RequestHeader(value = "userId", required = false) String userId,
-                                             @RequestHeader(value = "username", required = false) String username) {
+                                             @RequestHeader(value = "username", required = false) String username,
+                                             HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanAdd()))) {
+            return forbidden();
+        }
         try {
-            // TODO: 权限验证 - 只有有权限的用户才能新增
             PriceBook saved = priceBookService.createPriceBook(priceBook, userId, username);
             return Result.success(saved);
         } catch (Exception e) {
@@ -108,9 +156,12 @@ public class PriceBookController {
     public Result<PriceBook> updatePriceBook(@PathVariable String id,
                                             @RequestBody PriceBook priceBook,
                                             @RequestHeader(value = "userId", required = false) String userId,
-                                            @RequestHeader(value = "username", required = false) String username) {
+                                            @RequestHeader(value = "username", required = false) String username,
+                                            HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanUpdate()))) {
+            return forbidden();
+        }
         try {
-            // TODO: 权限验证 - 只有有权限的用户才能修改
             PriceBook updated = priceBookService.updatePriceBook(id, priceBook, userId, username);
             return Result.success(updated);
         } catch (Exception e) {
@@ -124,9 +175,12 @@ public class PriceBookController {
     @DeleteMapping("/{id}")
     public Result<Void> deletePriceBook(@PathVariable String id,
                                         @RequestHeader(value = "userId", required = false) String userId,
-                                        @RequestHeader(value = "username", required = false) String username) {
+                                        @RequestHeader(value = "username", required = false) String username,
+                                        HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanUpdate()))) {
+            return forbidden();
+        }
         try {
-            // TODO: 权限验证 - 只有有权限的用户才能删除
             priceBookService.deletePriceBook(id, userId, username);
             return Result.success(null);
         } catch (Exception e) {
@@ -138,7 +192,10 @@ public class PriceBookController {
      * 查询价格修改日志
      */
     @GetMapping("/{id}/logs")
-    public Result<List<PriceBookLog>> getPriceBookLogs(@PathVariable String id) {
+    public Result<List<PriceBookLog>> getPriceBookLogs(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         try {
             List<PriceBookLog> logs = priceBookService.findPriceBookLogs(id);
             return Result.success(logs);
@@ -156,7 +213,12 @@ public class PriceBookController {
             @RequestParam(required = false) String department,
             @RequestParam(required = false) String productName,
             @RequestParam(required = false) String model,
-            HttpServletResponse response) throws IOException {
+            HttpServletResponse response,
+            HttpServletRequest request) throws IOException {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
         try {
             List<PriceBook> priceBooks;
             if (productType != null || department != null || productName != null || model != null) {
@@ -185,7 +247,10 @@ public class PriceBookController {
      * 获取产品列表（用于下拉选择）
      */
     @GetMapping("/products")
-    public Result<List<Product>> getProducts(@RequestParam(required = false) String productType) {
+    public Result<List<Product>> getProducts(@RequestParam(required = false) String productType, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         try {
             List<Product> products;
             if (productType != null && !productType.isEmpty()) {
@@ -203,7 +268,10 @@ public class PriceBookController {
      * 获取部门列表（用于下拉选择）
      */
     @GetMapping("/departments")
-    public Result<List<Map<String, String>>> getDepartments() {
+    public Result<List<Map<String, String>>> getDepartments(HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         try {
             List<Map<String, String>> departments = List.of(
                     Map.of("value", "销售处", "label", "销售处"),
@@ -220,7 +288,10 @@ public class PriceBookController {
      * 获取产品类别列表（用于下拉选择）
      */
     @GetMapping("/product-types")
-    public Result<List<Map<String, String>>> getProductTypes() {
+    public Result<List<Map<String, String>>> getProductTypes(HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PRICE_BOOK, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         try {
             List<Map<String, String>> productTypes = List.of(
                     Map.of("value", "SINGLE", "label", "单泵（单体设备）"),

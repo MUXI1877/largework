@@ -2,8 +2,11 @@ package com.it.quanxianguanli.controller;
 
 import com.it.quanxianguanli.dto.Result;
 import com.it.quanxianguanli.entity.*;
+import com.it.quanxianguanli.entity.SysPermission;
 import com.it.quanxianguanli.service.CustomerService;
+import com.it.quanxianguanli.service.SysPermissionService;
 import com.it.quanxianguanli.util.ExcelUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
 
 @RestController
 @RequestMapping("/api/customer")
@@ -19,20 +24,58 @@ public class CustomerController {
     @Autowired
     private CustomerService customerService;
 
+    @Autowired
+    private SysPermissionService permissionService;
+
+    private static final Set<String> ADMIN_ROLES = Set.of("r001", "r002");
+    private static final String MODULE_CUSTOMER = "m008";
+
+    private boolean isAdmin(HttpServletRequest request) {
+        Object roleId = request.getAttribute("roleId");
+        return roleId != null && ADMIN_ROLES.contains(roleId.toString());
+    }
+
+    private boolean hasPermission(HttpServletRequest request, String moduleId,
+                                  Predicate<SysPermission> predicate) {
+        if (isAdmin(request)) {
+            return true;
+        }
+        Object roleId = request.getAttribute("roleId");
+        if (roleId == null) {
+            return false;
+        }
+        return permissionService.findByRoleIdAndModuleId(roleId.toString(), moduleId)
+                .map(predicate::test)
+                .orElse(false);
+    }
+
+    private <T> Result<T> forbidden() {
+        return Result.error(403, "无权限操作");
+    }
+
     @GetMapping("/list")
-    public Result<List<Customer>> list() {
+    public Result<List<Customer>> list(HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return Result.success(customerService.findAll());
     }
 
     @GetMapping("/{id}")
-    public Result<Customer> getById(@PathVariable String id) {
+    public Result<Customer> getById(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return customerService.findById(id)
                 .map(Result::success)
                 .orElse(Result.error("客户不存在"));
     }
 
     @PostMapping("/save")
-    public Result<Customer> save(@RequestBody Customer customer) {
+    public Result<Customer> save(@RequestBody Customer customer, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanAdd()))) {
+            return forbidden();
+        }
         try {
             Customer saved = customerService.save(customer);
             return Result.success("保存成功", saved);
@@ -42,7 +85,10 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id) {
+    public Result<Void> delete(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanUpdate()))) {
+            return forbidden();
+        }
         try {
             customerService.delete(id);
             return Result.success("删除成功", null);
@@ -52,7 +98,11 @@ public class CustomerController {
     }
 
     @GetMapping("/export")
-    public void export(HttpServletResponse response) {
+    public void export(HttpServletResponse response, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
         try {
             // 获取数据
             List<Customer> customers = customerService.findAll();
@@ -115,12 +165,18 @@ public class CustomerController {
 
     // 客户关键人物管理
     @GetMapping("/{customerId}/key-persons")
-    public Result<List<CustomerKeyPerson>> getKeyPersons(@PathVariable String customerId) {
+    public Result<List<CustomerKeyPerson>> getKeyPersons(@PathVariable String customerId, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return Result.success(customerService.getKeyPersons(customerId));
     }
 
     @PostMapping("/key-person/save")
-    public Result<CustomerKeyPerson> saveKeyPerson(@RequestBody CustomerKeyPerson keyPerson) {
+    public Result<CustomerKeyPerson> saveKeyPerson(@RequestBody CustomerKeyPerson keyPerson, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanAdd()))) {
+            return forbidden();
+        }
         try {
             CustomerKeyPerson saved = customerService.saveKeyPerson(keyPerson);
             return Result.success("保存成功", saved);
@@ -130,7 +186,10 @@ public class CustomerController {
     }
 
     @DeleteMapping("/key-person/{id}")
-    public Result<Void> deleteKeyPerson(@PathVariable String id) {
+    public Result<Void> deleteKeyPerson(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanUpdate()))) {
+            return forbidden();
+        }
         try {
             customerService.deleteKeyPerson(id);
             return Result.success("删除成功", null);
@@ -141,25 +200,37 @@ public class CustomerController {
 
     // 项目机会
     @GetMapping("/{customerId}/project-opportunities")
-    public Result<List<ProjectOpportunity>> getProjectOpportunities(@PathVariable String customerId) {
+    public Result<List<ProjectOpportunity>> getProjectOpportunities(@PathVariable String customerId, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return Result.success(customerService.getProjectOpportunities(customerId));
     }
 
     // 合同信息
     @GetMapping("/{customerId}/contracts")
-    public Result<List<Contract>> getContracts(@PathVariable String customerId) {
+    public Result<List<Contract>> getContracts(@PathVariable String customerId, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return Result.success(customerService.getContracts(customerId));
     }
 
     // 售后信息
     @GetMapping("/{customerId}/after-sales")
-    public Result<List<AfterSales>> getAfterSales(@PathVariable String customerId) {
+    public Result<List<AfterSales>> getAfterSales(@PathVariable String customerId, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return Result.success(customerService.getAfterSales(customerId));
     }
 
     // 客户来访信息
     @GetMapping("/{customerId}/visits")
-    public Result<List<CustomerVisit>> getCustomerVisits(@PathVariable String customerId) {
+    public Result<List<CustomerVisit>> getCustomerVisits(@PathVariable String customerId, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return Result.success(customerService.getCustomerVisits(customerId));
     }
 }

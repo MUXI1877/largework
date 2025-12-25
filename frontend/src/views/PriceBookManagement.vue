@@ -5,8 +5,8 @@
         <div class="card-header">
           <span>价格本管理</span>
           <div>
-            <el-button type="primary" @click="handleAdd">新增</el-button>
-            <el-button type="success" @click="handleExport">导出</el-button>
+            <el-button type="primary" v-permission="{ moduleId: 'm019', action: 'add' }" @click="handleAdd">新增</el-button>
+            <el-button type="success" v-permission="{ moduleId: 'm019', action: 'read' }" @click="handleExport">导出</el-button>
             <el-button @click="handleRefresh">刷新</el-button>
           </div>
         </div>
@@ -65,9 +65,9 @@
         <el-table-column prop="remarks" label="备注" width="200" show-overflow-tooltip />
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="handleViewLogs(scope.row)">日志</el-button>
-            <el-button type="warning" size="small" @click="handleEdit(scope.row)">修改</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="primary" size="small" v-permission="{ moduleId: 'm019', action: 'read' }" @click="handleViewLogs(scope.row)">日志</el-button>
+            <el-button type="warning" size="small" v-permission="{ moduleId: 'm019', action: 'update' }" @click="handleEdit(scope.row)">修改</el-button>
+            <el-button type="danger" size="small" v-permission="{ moduleId: 'm019', action: 'update' }" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -199,6 +199,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { canRead, loadPermissions } from '../utils/permission'
 import {
   getPriceBooks,
   createPriceBook,
@@ -515,7 +516,8 @@ const init = async () => {
   loadPriceBooks()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadPermissions()
   init()
 })
 </script>

@@ -5,8 +5,8 @@
         <div class="card-header">
           <span>销售机会管理</span>
           <div>
-            <el-button type="primary" @click="handleAdd">新增</el-button>
-            <el-button type="success" @click="handleExport">导出</el-button>
+            <el-button type="primary" v-permission="{ moduleId: 'm013', action: 'add' }" @click="handleAdd">新增</el-button>
+            <el-button type="success" v-permission="{ moduleId: 'm013', action: 'read' }" @click="handleExport">导出</el-button>
           </div>
         </div>
       </template>
@@ -55,9 +55,10 @@
         <el-table-column prop="status" label="状态" width="100" />
         <el-table-column label="操作" width="300" fixed="right">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
+            <el-button type="primary" size="small" v-permission="{ moduleId: 'm013', action: 'read' }" @click="handleView(scope.row)">查看</el-button>
             <el-button
               v-if="!scope.row.isSubmitted"
+              v-permission="{ moduleId: 'm013', action: 'update' }"
               type="warning"
               size="small"
               @click="handleEdit(scope.row)"
@@ -66,17 +67,19 @@
             </el-button>
             <el-button
               v-if="!scope.row.isSubmitted"
+              v-permission="{ moduleId: 'm013', action: 'update' }"
               type="success"
               size="small"
               @click="handleSubmit(scope.row)"
             >
               提交
             </el-button>
-            <el-button type="info" size="small" @click="handleTransfer(scope.row)">传递片区</el-button>
-            <el-button type="info" size="small" @click="handleAssign(scope.row)">分配员工</el-button>
-            <el-button type="primary" size="small" @click="handleTrack(scope.row)">跟踪</el-button>
+            <el-button type="info" size="small" v-permission="{ moduleId: 'm013', action: 'update' }" @click="handleTransfer(scope.row)">传递片区</el-button>
+            <el-button type="info" size="small" v-permission="{ moduleId: 'm013', action: 'update' }" @click="handleAssign(scope.row)">分配员工</el-button>
+            <el-button type="primary" size="small" v-permission="{ moduleId: 'm013', action: 'read' }" @click="handleTrack(scope.row)">跟踪</el-button>
             <el-button
               v-if="!scope.row.isSubmitted"
+              v-permission="{ moduleId: 'm013', action: 'update' }"
               type="danger"
               size="small"
               @click="handleDelete(scope.row)"
@@ -373,6 +376,7 @@ import { getCustomerList } from '../api/customer'
 import { getSalesRegionList } from '../api/team'
 import { getSalesPersonList } from '../api/team'
 import { getToken } from '../utils/auth'
+import { canRead, loadPermissions } from '../utils/permission'
 
 const loading = ref(false)
 const opportunityList = ref([])
@@ -739,7 +743,8 @@ const handleExport = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadPermissions()
   loadCustomers()
   loadRegions()
   loadEmployees()

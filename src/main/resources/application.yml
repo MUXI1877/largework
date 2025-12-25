@@ -2,9 +2,9 @@ spring:
   application:
     name: quanxianguanli
   datasource:
-    url: jdbc:mysql://localhost:3306/quanxianguanli?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/111?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: 123456
+    password: liyuan12345211
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:

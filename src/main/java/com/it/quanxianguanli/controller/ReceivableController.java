@@ -1,5 +1,6 @@
 package com.it.quanxianguanli.controller;
 
+import com.it.quanxianguanli.dto.Result;
 import com.it.quanxianguanli.entity.ReceivablePlan;
 import com.it.quanxianguanli.entity.ReceivableReceipt;
 import com.it.quanxianguanli.service.ReceivablePlanService;
@@ -57,6 +58,16 @@ public class ReceivableController {
         return planService.updateBasicInfo(id, req.getDueDate(), req.getOwner(), req.getRemarks());
     }
 
+    @RequestMapping(value = "/receivable-plan/{id}", method = RequestMethod.DELETE)
+    public Result<Void> deletePlan(@PathVariable String id) {
+        try {
+            planService.deleteById(id);
+            return Result.success("删除成功", null);
+        } catch (Exception e) {
+            return Result.error("删除失败：" + e.getMessage());
+        }
+    }
+
     @GetMapping("/receivable-plan/export")
     public void exportPlans(HttpServletResponse response,
                             @RequestParam(required = false) String contractCode,
@@ -102,6 +113,16 @@ public class ReceivableController {
     @PutMapping("/receivable-receipt/{id}/remark")
     public ReceivableReceipt updateReceiptRemark(@PathVariable String id, @RequestBody ReceivableReceipt req) {
         return receiptService.updateRemark(id, req.getRemarks());
+    }
+
+    @RequestMapping(value = "/receivable-receipt/{id}", method = RequestMethod.DELETE)
+    public Result<Void> deleteReceipt(@PathVariable String id) {
+        try {
+            receiptService.deleteById(id);
+            return Result.success("删除成功", null);
+        } catch (Exception e) {
+            return Result.error("删除失败：" + e.getMessage());
+        }
     }
 
     @GetMapping("/receivable-receipt/export")

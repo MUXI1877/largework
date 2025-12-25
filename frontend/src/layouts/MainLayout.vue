@@ -81,7 +81,9 @@ import {
   Opportunity,
   Document,
   Goods,
-  Files
+  Files,
+  Calendar,
+  Location
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -108,7 +110,9 @@ const ICON_MAP = {
   'el-icon-opportunity': Opportunity,
   'el-icon-document': Document,
   'el-icon-goods': Goods,
-  'el-icon-files': Files
+  'el-icon-files': Files,
+  'el-icon-date': Calendar,
+  'el-icon-location': Location
 }
 
 // 模块ID到路由路径的映射
@@ -130,7 +134,9 @@ const MODULE_PATH_MAP = {
   'm019': '/price-book-management',
   'm021': '/ar-plan',
   'm022': '/ar-receipt',
-  'm023': '/ar-query'
+  'm023': '/ar-query',
+  'm024': '/destination-management',
+  'm025': '/weekly-report-management'
 }
 
 // 获取图标组件

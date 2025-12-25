@@ -1,5 +1,6 @@
 package com.it.quanxianguanli.service;
 
+import com.it.quanxianguanli.entity.ReceivablePlan;
 import com.it.quanxianguanli.entity.ReceivableReceipt;
 import com.it.quanxianguanli.repository.ReceivableReceiptRepository;
 import org.springframework.data.domain.Page;
@@ -20,10 +21,14 @@ public class ReceivableReceiptService {
 
     private final ReceivableReceiptRepository receiptRepository;
     private final ReceivablePlanService planService;
+    private final com.it.quanxianguanli.repository.ReceivablePlanRepository planRepository;
 
-    public ReceivableReceiptService(ReceivableReceiptRepository receiptRepository, ReceivablePlanService planService) {
+    public ReceivableReceiptService(ReceivableReceiptRepository receiptRepository, 
+                                    ReceivablePlanService planService,
+                                    com.it.quanxianguanli.repository.ReceivablePlanRepository planRepository) {
         this.receiptRepository = receiptRepository;
         this.planService = planService;
+        this.planRepository = planRepository;
     }
 
     @Transactional
@@ -60,6 +65,35 @@ public class ReceivableReceiptService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
         return receiptRepository.findAll(spec, pageable);
+    }
+
+    @Transactional
+    public void deleteById(String id) {
+        ReceivableReceipt receipt = receiptRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("回款记录不存在"));
+        
+        String contractCode = receipt.getContractCode();
+        
+        // 删除回款记录
+        receiptRepository.deleteById(id);
+        
+        // 重新计算该合同的应收账计划状态
+        // 重置所有计划的已付金额
+        List<ReceivablePlan> plans = planService.findByContractCodeOrderByDueDateAscCreateTimeAsc(contractCode);
+        for (ReceivablePlan plan : plans) {
+            plan.setPaidAmount(BigDecimal.ZERO);
+            plan.setPaidDate(null);
+            planService.updateStatus(plan);
+            planRepository.save(plan);
+        }
+        
+        // 重新分配所有剩余的回款记录
+        List<ReceivableReceipt> allReceipts = receiptRepository.findByContractCode(contractCode);
+        for (ReceivableReceipt r : allReceipts) {
+            if (r.getReceiveAmount() != null && r.getReceiveAmount().compareTo(BigDecimal.ZERO) > 0) {
+                planService.applyReceipt(r.getContractCode(), r.getReceiveAmount(), r.getReceiveDate());
+            }
+        }
     }
 
     private BigDecimal calcRemaining(String contractCode, BigDecimal contractAmount, BigDecimal latestReceive) {

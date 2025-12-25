@@ -3,8 +3,11 @@ package com.it.quanxianguanli.controller;
 import com.it.quanxianguanli.dto.Result;
 import com.it.quanxianguanli.entity.QuotationItem;
 import com.it.quanxianguanli.entity.SalesQuotation;
+import com.it.quanxianguanli.entity.SysPermission;
 import com.it.quanxianguanli.service.SalesQuotationService;
+import com.it.quanxianguanli.service.SysPermissionService;
 import com.it.quanxianguanli.util.ExcelUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 
 @RestController
 @RequestMapping("/api/sales-quotation")
@@ -23,26 +28,65 @@ public class SalesQuotationController {
     @Autowired
     private SalesQuotationService salesQuotationService;
 
+    @Autowired
+    private SysPermissionService permissionService;
+
+    private static final Set<String> ADMIN_ROLES = Set.of("r001", "r002");
+    private static final String MODULE_SALES_QUOTATION = "m015";
+
+    private boolean isAdmin(HttpServletRequest request) {
+        Object roleId = request.getAttribute("roleId");
+        return roleId != null && ADMIN_ROLES.contains(roleId.toString());
+    }
+
+    private boolean hasPermission(HttpServletRequest request, String moduleId,
+                                  Predicate<SysPermission> predicate) {
+        if (isAdmin(request)) {
+            return true;
+        }
+        Object roleId = request.getAttribute("roleId");
+        if (roleId == null) {
+            return false;
+        }
+        return permissionService.findByRoleIdAndModuleId(roleId.toString(), moduleId)
+                .map(predicate::test)
+                .orElse(false);
+    }
+
+    private <T> Result<T> forbidden() {
+        return Result.error(403, "无权限操作");
+    }
+
     @GetMapping("/list")
     public Result<List<SalesQuotation>> list(
             @RequestParam(required = false) String quotationName,
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_SALES_QUOTATION, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         List<SalesQuotation> quotations = salesQuotationService.findByConditions(
                 quotationName, customerName, startDate, endDate);
         return Result.success(quotations);
     }
 
     @GetMapping("/{id}")
-    public Result<SalesQuotation> getById(@PathVariable String id) {
+    public Result<SalesQuotation> getById(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_SALES_QUOTATION, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return salesQuotationService.findById(id)
                 .map(Result::success)
                 .orElse(Result.error("报价单不存在"));
     }
 
     @PostMapping("/save")
-    public Result<SalesQuotation> save(@RequestBody SalesQuotation quotation) {
+    public Result<SalesQuotation> save(@RequestBody SalesQuotation quotation, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_SALES_QUOTATION, p -> Boolean.TRUE.equals(p.getCanAdd()))) {
+            return forbidden();
+        }
         try {
             SalesQuotation saved = salesQuotationService.save(quotation);
             return Result.success("保存成功", saved);
@@ -52,7 +96,10 @@ public class SalesQuotationController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id) {
+    public Result<Void> delete(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_SALES_QUOTATION, p -> Boolean.TRUE.equals(p.getCanUpdate()))) {
+            return forbidden();
+        }
         try {
             salesQuotationService.delete(id);
             return Result.success("删除成功", null);
@@ -62,12 +109,18 @@ public class SalesQuotationController {
     }
 
     @GetMapping("/{id}/items")
-    public Result<List<QuotationItem>> getItems(@PathVariable String id) {
+    public Result<List<QuotationItem>> getItems(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_SALES_QUOTATION, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return Result.success(salesQuotationService.getItems(id));
     }
 
     @PostMapping("/{id}/items")
-    public Result<Void> saveItems(@PathVariable String id, @RequestBody List<QuotationItem> items) {
+    public Result<Void> saveItems(@PathVariable String id, @RequestBody List<QuotationItem> items, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_SALES_QUOTATION, p -> Boolean.TRUE.equals(p.getCanAdd()))) {
+            return forbidden();
+        }
         try {
             salesQuotationService.saveItems(id, items);
             return Result.success("保存成功", null);
@@ -82,7 +135,12 @@ public class SalesQuotationController {
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            HttpServletResponse response) {
+            HttpServletResponse response,
+            HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_SALES_QUOTATION, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
         try {
             List<SalesQuotation> quotations = salesQuotationService.findByConditions(
                     quotationName, customerName, startDate, endDate);
@@ -118,7 +176,10 @@ public class SalesQuotationController {
 
     // 打印和导出PDF功能需要前端实现，这里提供数据接口
     @GetMapping("/{id}/print")
-    public Result<Map<String, Object>> getPrintData(@PathVariable String id) {
+    public Result<Map<String, Object>> getPrintData(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_SALES_QUOTATION, p -> Boolean.TRUE.equals(p.getCanRead()))) {
+            return forbidden();
+        }
         return salesQuotationService.findById(id)
                 .map(quotation -> {
                     List<QuotationItem> items = salesQuotationService.getItems(id);

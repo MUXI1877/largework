@@ -5,7 +5,13 @@
         <div class="card-header">
           <span>回款登记</span>
           <div>
-            <el-button type="primary" @click="openDialog()">新增回款</el-button>
+            <el-button 
+              v-permission="{ moduleId: 'm022', action: 'add' }"
+              type="primary" 
+              @click="openDialog()"
+            >
+              新增回款
+            </el-button>
             <el-button type="success" @click="exportReceiptsList">导出</el-button>
             <el-button @click="refresh">刷新</el-button>
           </div>
@@ -26,7 +32,13 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleQuery">查询</el-button>
+          <el-button 
+            v-permission="{ moduleId: 'm022', action: 'read' }"
+            type="primary" 
+            @click="handleQuery"
+          >
+            查询
+          </el-button>
           <el-button @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
@@ -48,9 +60,24 @@
           </template>
         </el-table-column>
         <el-table-column prop="remarks" label="备注" min-width="160" show-overflow-tooltip />
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
-            <el-button type="warning" size="small" @click="openDialog(scope.row)">备注</el-button>
+            <el-button 
+              v-permission="{ moduleId: 'm022', action: 'update' }"
+              type="warning" 
+              size="small" 
+              @click="openDialog(scope.row)"
+            >
+              备注
+            </el-button>
+            <el-button 
+              v-permission="{ moduleId: 'm022', action: 'delete' }"
+              type="danger" 
+              size="small" 
+              @click="handleDelete(scope.row)"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -105,11 +132,13 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { canRead, loadPermissions } from '../utils/permission'
 import {
   getReceivableReceipts,
   createReceivableReceipt,
   updateReceiptRemark,
+  deleteReceivableReceipt,
   exportReceivableReceipts
 } from '../api/receivable'
 
@@ -206,7 +235,7 @@ const handlePageChange = (val) => {
 const openDialog = (row) => {
   dialogTitle.value = row ? '修改备注' : '新增回款'
   Object.assign(form, {
-    id: row?.id || '',
+    id: row?.id || null,
     contractCode: row?.contractCode || '',
     contractName: row?.contractName || '',
     contractAmount: row?.contractAmount || null,
@@ -231,10 +260,12 @@ const save = async () => {
       return
     }
     const payload = { ...form }
-    if (form.id) {
-      await updateReceiptRemark(form.id, { remarks: form.remarks })
-    } else {
+    // 新增时，确保id为null或undefined，不发送id字段
+    if (!form.id || form.id === '') {
+      delete payload.id
       await createReceivableReceipt(payload)
+    } else {
+      await updateReceiptRemark(form.id, { remarks: form.remarks })
     }
     ElMessage.success('保存成功')
     dialogVisible.value = false
@@ -242,6 +273,24 @@ const save = async () => {
   } catch (e) {
     ElMessage.error(e.message || '保存失败')
   }
+}
+
+const handleDelete = (row) => {
+  ElMessageBox.confirm('确定要删除该回款记录吗？删除后将会重新计算应收账计划状态。', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await deleteReceivableReceipt(row.id)
+      ElMessage.success('删除成功')
+      loadData()
+    } catch (e) {
+      ElMessage.error(e.message || e.msg || '删除失败')
+    }
+  }).catch(() => {
+    // 用户取消删除
+  })
 }
 
 const exportReceiptsList = async () => {
@@ -260,8 +309,13 @@ const exportReceiptsList = async () => {
   }
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadPermissions()
+  if (canRead('m022')) {
+    loadData()
+  } else {
+    ElMessage.warning('您没有查看回款登记的权限')
+  }
 })
 </script>
 

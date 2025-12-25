@@ -5,7 +5,7 @@
         <div class="card-header">
           <span>销售库存查询</span>
           <div>
-            <el-button type="success" @click="handleExport">导出</el-button>
+            <el-button type="success" v-permission="{ moduleId: 'm014', action: 'read' }" @click="handleExport">导出</el-button>
           </div>
         </div>
       </template>
@@ -57,6 +57,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { queryInventory, exportInventory } from '../api/product'
+import { canRead, loadPermissions } from '../utils/permission'
 
 const loading = ref(false)
 const productList = ref([])
@@ -120,7 +121,8 @@ const handleExport = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadPermissions()
   loadData()
 })
 </script>

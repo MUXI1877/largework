@@ -5,7 +5,7 @@
         <div class="card-header">
           <span>销售降库管理</span>
           <div>
-            <el-button type="success" @click="handleExport">导出</el-button>
+            <el-button type="success" v-permission="{ moduleId: 'm016', action: 'read' }" @click="handleExport">导出</el-button>
           </div>
         </div>
       </template>
@@ -59,7 +59,7 @@
         </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="handleMarkReduced(scope.row)">
+            <el-button type="primary" size="small" v-permission="{ moduleId: 'm016', action: 'update' }" @click="handleMarkReduced(scope.row)">
               降库
             </el-button>
           </template>
@@ -88,6 +88,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { canRead, loadPermissions } from '../utils/permission'
 import {
   queryReducedStockProducts,
   exportReducedStockProducts,
@@ -200,7 +201,8 @@ const handleExport = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadPermissions()
   loadData()
 })
 </script>
