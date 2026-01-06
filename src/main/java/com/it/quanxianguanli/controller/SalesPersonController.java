@@ -1,6 +1,7 @@
 package com.it.quanxianguanli.controller;
 
 import com.it.quanxianguanli.dto.Result;
+import com.it.quanxianguanli.dto.SalesPersonDTO;
 import com.it.quanxianguanli.entity.SalesPerson;
 import com.it.quanxianguanli.service.SalesPersonService;
 import com.it.quanxianguanli.util.ExcelUtil;
@@ -21,18 +22,18 @@ public class SalesPersonController {
     private SalesPersonService salesPersonService;
 
     @GetMapping("/list")
-    public Result<List<SalesPerson>> list() {
-        return Result.success(salesPersonService.findAll());
+    public Result<List<SalesPersonDTO>> list() {
+        return Result.success(salesPersonService.findAllWithRegionName());
     }
 
     @GetMapping("/region/{regionId}")
-    public Result<List<SalesPerson>> listByRegion(@PathVariable String regionId) {
-        return Result.success(salesPersonService.findByRegionId(regionId));
+    public Result<List<SalesPersonDTO>> listByRegion(@PathVariable String regionId) {
+        return Result.success(salesPersonService.findByRegionIdWithRegionName(regionId));
     }
 
     @GetMapping("/{id}")
-    public Result<SalesPerson> getById(@PathVariable String id) {
-        return salesPersonService.findById(id)
+    public Result<SalesPersonDTO> getById(@PathVariable String id) {
+        return salesPersonService.findByIdWithRegionName(id)
                 .map(Result::success)
                 .orElse(Result.error("营销人员不存在"));
     }
@@ -65,7 +66,7 @@ public class SalesPersonController {
             String targetRegionId = (String) request.get("targetRegionId");
             String targetDepartment = (String) request.get("targetDepartment");
             String targetArea = (String) request.get("targetArea");
-            
+
             salesPersonService.batchTransfer(personIds, targetRegionId, targetDepartment, targetArea);
             return Result.success("批量调动成功", null);
         } catch (Exception e) {
@@ -77,8 +78,8 @@ public class SalesPersonController {
     public void export(HttpServletResponse response) {
         try {
             // 获取数据
-            List<SalesPerson> persons = salesPersonService.findAll();
-            
+            List<SalesPersonDTO> persons = salesPersonService.findAllWithRegionName();
+
             // 构建表头（列表展示字段：工号、姓名、职务、所属部门、联系方式、当前负责区域）
             List<String> headers = new ArrayList<>();
             headers.add("工号");
@@ -88,12 +89,13 @@ public class SalesPersonController {
             headers.add("联系方式");
             headers.add("职务");
             headers.add("所属部门");
+            headers.add("所属片区");
             headers.add("当前负责区域");
             headers.add("备注");
-            
+
             // 构建数据
             List<List<Object>> data = new ArrayList<>();
-            for (SalesPerson person : persons) {
+            for (SalesPersonDTO person : persons) {
                 List<Object> row = new ArrayList<>();
                 row.add(person.getEmployeeCode());
                 row.add(person.getName());
@@ -102,14 +104,15 @@ public class SalesPersonController {
                 row.add(person.getContactInfo());
                 row.add(person.getPosition());
                 row.add(person.getDepartment());
+                row.add(person.getRegionName());
                 row.add(person.getResponsibleArea());
                 row.add(person.getRemarks());
                 data.add(row);
             }
-            
+
             // 创建Excel
             Workbook workbook = ExcelUtil.createWorkbook(headers, data);
-            
+
             // 导出
             ExcelUtil.exportToResponse(response, workbook, "营销人员列表.xlsx");
         } catch (Exception e) {
@@ -117,4 +120,3 @@ public class SalesPersonController {
         }
     }
 }
-

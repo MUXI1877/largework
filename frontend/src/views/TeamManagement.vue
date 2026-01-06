@@ -8,9 +8,9 @@
             <div class="card-header">
               <span>销售片区管理</span>
               <div>
-                <el-button 
-                  v-permission="{ moduleId: 'm009', action: 'add' }"
-                  type="primary" @click="handleAddRegion">新增</el-button>
+                <el-button
+                    v-permission="{ moduleId: 'm009', action: 'add' }"
+                    type="primary" @click="handleAddRegion">新增</el-button>
                 <el-button type="success" @click="handleExportRegion">导出</el-button>
               </div>
             </div>
@@ -24,12 +24,12 @@
             <el-table-column prop="remarks" label="备注" />
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="scope">
-                <el-button 
-                  v-permission="{ moduleId: 'm009', action: 'update' }"
-                  type="warning" size="small" @click="handleEditRegion(scope.row)">修改</el-button>
-                <el-button 
-                  v-permission="{ moduleId: 'm009', action: 'update' }"
-                  type="danger" size="small" @click="handleDeleteRegion(scope.row)">删除</el-button>
+                <el-button
+                    v-permission="{ moduleId: 'm009', action: 'update' }"
+                    type="warning" size="small" @click="handleEditRegion(scope.row)">修改</el-button>
+                <el-button
+                    v-permission="{ moduleId: 'm009', action: 'update' }"
+                    type="danger" size="small" @click="handleDeleteRegion(scope.row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -43,9 +43,9 @@
             <div class="card-header">
               <span>营销人员管理</span>
               <div>
-                <el-button 
-                  v-permission="{ moduleId: 'm009', action: 'add' }"
-                  type="primary" @click="handleAddPerson">新增</el-button>
+                <el-button
+                    v-permission="{ moduleId: 'm009', action: 'add' }"
+                    type="primary" @click="handleAddPerson">新增</el-button>
                 <el-button type="success" @click="handleExportPerson">导出</el-button>
               </div>
             </div>
@@ -53,22 +53,32 @@
 
           <el-form :inline="true" :model="personQueryForm" class="query-form">
             <el-form-item label="所属片区">
-              <el-select v-model="personQueryForm.regionId" placeholder="请选择片区" clearable>
+              <el-select
+                  v-model="personQueryForm.regionId"
+                  placeholder="请选择片区"
+                  clearable
+                  @change="handleRegionChange"
+              >
                 <el-option
-                  v-for="region in regionList"
-                  :key="region.id"
-                  :label="region.regionName"
-                  :value="region.id"
+                    v-for="region in regionList"
+                    :key="region.id"
+                    :label="region.regionName"
+                    :value="region.id"
                 />
               </el-select>
             </el-form-item>
             <el-form-item>
-              <el-button 
-                v-permission="{ moduleId: 'm009', action: 'read' }"
-                type="primary" @click="handleQueryPerson">查询</el-button>
+              <el-button
+                  v-permission="{ moduleId: 'm009', action: 'read' }"
+                  type="primary" @click="handleQueryPerson">查询</el-button>
               <el-button @click="handleResetPerson">重置</el-button>
             </el-form-item>
           </el-form>
+
+          <div v-if="personQueryForm.regionId" style="margin-bottom: 15px; padding: 10px; background: #f5f7fa; border-radius: 4px;">
+            <span style="font-weight: bold; color: #409eff;">当前查询片区：</span>
+            <span>{{ selectedRegionName }}</span>
+          </div>
 
           <el-table :data="personList" border style="width: 100%" v-loading="personLoading">
             <el-table-column type="selection" width="55" />
@@ -78,14 +88,15 @@
             <el-table-column prop="birthday" label="生日" />
             <el-table-column prop="contactInfo" label="联系方式" />
             <el-table-column prop="position" label="职务" />
+            <el-table-column prop="regionName" label="所属片区" />
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="scope">
-                <el-button 
-                  v-permission="{ moduleId: 'm009', action: 'update' }"
-                  type="warning" size="small" @click="handleEditPerson(scope.row)">修改</el-button>
-                <el-button 
-                  v-permission="{ moduleId: 'm009', action: 'update' }"
-                  type="danger" size="small" @click="handleDeletePerson(scope.row)">删除</el-button>
+                <el-button
+                    v-permission="{ moduleId: 'm009', action: 'update' }"
+                    type="warning" size="small" @click="handleEditPerson(scope.row)">修改</el-button>
+                <el-button
+                    v-permission="{ moduleId: 'm009', action: 'update' }"
+                    type="danger" size="small" @click="handleDeletePerson(scope.row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -102,11 +113,11 @@
           </template>
 
           <el-table
-            :data="personList"
-            border
-            style="width: 100%"
-            v-loading="personLoading"
-            @selection-change="handleSelectionChange"
+              :data="personList"
+              border
+              style="width: 100%"
+              v-loading="personLoading"
+              @selection-change="handleSelectionChange"
           >
             <el-table-column type="selection" width="55" />
             <el-table-column prop="employeeCode" label="工号" />
@@ -114,6 +125,7 @@
             <el-table-column prop="position" label="职务" />
             <el-table-column prop="department" label="所属部门" />
             <el-table-column prop="contactInfo" label="联系方式" />
+            <el-table-column prop="regionName" label="所属片区" />
             <el-table-column prop="responsibleArea" label="当前负责区域" />
           </el-table>
 
@@ -128,10 +140,10 @@
 
     <!-- 片区编辑对话框 -->
     <el-dialog
-      v-model="regionDialogVisible"
-      :title="regionDialogTitle"
-      width="600px"
-      @close="handleRegionDialogClose"
+        v-model="regionDialogVisible"
+        :title="regionDialogTitle"
+        width="600px"
+        @close="handleRegionDialogClose"
     >
       <el-form :model="regionForm" :rules="regionRules" ref="regionFormRef" label-width="120px">
         <el-form-item label="片区名称" prop="regionName">
@@ -162,10 +174,10 @@
 
     <!-- 营销人员编辑对话框 -->
     <el-dialog
-      v-model="personDialogVisible"
-      :title="personDialogTitle"
-      width="600px"
-      @close="handlePersonDialogClose"
+        v-model="personDialogVisible"
+        :title="personDialogTitle"
+        width="600px"
+        @close="handlePersonDialogClose"
     >
       <el-form :model="personForm" :rules="personRules" ref="personFormRef" label-width="120px">
         <el-form-item label="工号">
@@ -189,10 +201,10 @@
         <el-form-item label="所属片区">
           <el-select v-model="personForm.regionId" placeholder="请选择片区">
             <el-option
-              v-for="region in regionList"
-              :key="region.id"
-              :label="region.regionName"
-              :value="region.id"
+                v-for="region in regionList"
+                :key="region.id"
+                :label="region.regionName"
+                :value="region.id"
             />
           </el-select>
         </el-form-item>
@@ -211,9 +223,9 @@
 
     <!-- 人员调动对话框 -->
     <el-dialog
-      v-model="transferDialogVisible"
-      title="批量调动人员"
-      width="600px"
+        v-model="transferDialogVisible"
+        title="批量调动人员"
+        width="600px"
     >
       <el-form :model="transferForm" label-width="120px">
         <el-form-item label="目标负责区域">
@@ -229,10 +241,10 @@
         <el-form-item label="目标所属片区">
           <el-select v-model="transferForm.targetRegionId" placeholder="请选择片区">
             <el-option
-              v-for="region in regionList"
-              :key="region.id"
-              :label="region.regionName"
-              :value="region.id"
+                v-for="region in regionList"
+                :key="region.id"
+                :label="region.regionName"
+                :value="region.id"
             />
           </el-select>
         </el-form-item>
@@ -249,7 +261,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { canRead, loadPermissions } from '../utils/permission'
 import {
@@ -324,6 +336,13 @@ const transferForm = reactive({
   targetArea: ''
 })
 
+// 计算属性：获取选中的片区名称
+const selectedRegionName = computed(() => {
+  if (!personQueryForm.regionId) return ''
+  const selectedRegion = regionList.value.find(region => region.id === personQueryForm.regionId)
+  return selectedRegion ? selectedRegion.regionName : ''
+})
+
 const loadRegions = async () => {
   regionLoading.value = true
   try {
@@ -351,6 +370,12 @@ const loadPersons = async () => {
   } finally {
     personLoading.value = false
   }
+}
+
+const handleRegionChange = () => {
+  // 片区选择变化时，可以在这里添加额外的逻辑
+  console.log('选择的片区ID:', personQueryForm.regionId)
+  console.log('选择的片区名称:', selectedRegionName.value)
 }
 
 const handleQueryPerson = () => {
@@ -577,4 +602,3 @@ onMounted(async () => {
   margin-bottom: 20px;
 }
 </style>
-

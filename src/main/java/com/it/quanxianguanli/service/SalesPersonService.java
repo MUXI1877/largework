@@ -1,5 +1,6 @@
 package com.it.quanxianguanli.service;
 
+import com.it.quanxianguanli.dto.SalesPersonDTO;
 import com.it.quanxianguanli.entity.SalesPerson;
 import com.it.quanxianguanli.repository.SalesPersonRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,12 +9,59 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class SalesPersonService {
 
     @Autowired
     private SalesPersonRepository salesPersonRepository;
+
+    @Autowired
+    private SalesRegionService salesRegionService;
+
+    // 返回包含片区名称的DTO列表
+    public List<SalesPersonDTO> findAllWithRegionName() {
+        return salesPersonRepository.findAll().stream()
+                .map(this::convertToDTOWithRegionName)
+                .collect(Collectors.toList());
+    }
+
+    // 根据ID返回包含片区名称的DTO
+    public Optional<SalesPersonDTO> findByIdWithRegionName(String id) {
+        return salesPersonRepository.findById(id)
+                .map(this::convertToDTOWithRegionName);
+    }
+
+    // 根据片区ID返回包含片区名称的DTO列表
+    public List<SalesPersonDTO> findByRegionIdWithRegionName(String regionId) {
+        return salesPersonRepository.findByRegionId(regionId).stream()
+                .map(this::convertToDTOWithRegionName)
+                .collect(Collectors.toList());
+    }
+
+    // 将SalesPerson转换为SalesPersonDTO并填充片区名称
+    private SalesPersonDTO convertToDTOWithRegionName(SalesPerson person) {
+        SalesPersonDTO dto = new SalesPersonDTO();
+        dto.setId(person.getId());
+        dto.setEmployeeCode(person.getEmployeeCode());
+        dto.setName(person.getName());
+        dto.setGender(person.getGender());
+        dto.setBirthday(person.getBirthday());
+        dto.setContactInfo(person.getContactInfo());
+        dto.setRegionId(person.getRegionId());
+        dto.setPosition(person.getPosition());
+        dto.setDepartment(person.getDepartment());
+        dto.setResponsibleArea(person.getResponsibleArea());
+        dto.setRemarks(person.getRemarks());
+        dto.setErpSyncId(person.getErpSyncId());
+
+        if (person.getRegionId() != null) {
+            salesRegionService.findById(person.getRegionId())
+                    .ifPresent(region -> dto.setRegionName(region.getRegionName()));
+        }
+        return dto;
+    }
 
     public List<SalesPerson> findAll() {
         return salesPersonRepository.findAll();
@@ -58,4 +106,3 @@ public class SalesPersonService {
         }
     }
 }
-
