@@ -2,6 +2,7 @@ package com.it.quanxianguanli.service;
 
 import com.it.quanxianguanli.entity.SysModule;
 import com.it.quanxianguanli.repository.SysModuleRepository;
+import com.it.quanxianguanli.repository.SysPermissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,10 +16,12 @@ public class SysModuleService {
     @Autowired
     private SysModuleRepository moduleRepository;
 
+    @Autowired
+    private SysPermissionRepository permissionRepository;
+
     public List<SysModule> findAll() {
         return moduleRepository.findAll();
     }
-
 
     public List<TreeNode> findTree() {
         List<SysModule> all = moduleRepository.findAll();
@@ -118,8 +121,8 @@ public class SysModuleService {
             throw new RuntimeException("请先删除下级模块");
         }
 
-        // 检查是否被角色引用（这里需要权限表的查询）
-        // TODO: 添加角色引用检查逻辑
+        // 删除与该模块相关的所有权限记录（解决外键约束问题）
+        permissionRepository.deleteByModuleId(id);
 
         // 更新父节点的isParent状态
         if (module.getParentId() != null) {

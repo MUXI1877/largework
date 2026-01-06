@@ -25,16 +25,35 @@ public class SysRoleService {
 
     @Transactional
     public SysRole save(SysRole role) {
+        // 新增角色时自动生成角色代码
         if (role.getId() == null) {
-            // 新增时检查唯一性
+            // 检查角色名唯一性
             if (roleRepository.findByRoleName(role.getRoleName()).isPresent()) {
                 throw new RuntimeException("角色名已存在");
+            }
+
+            // 自动生成角色代码（例如：R001, R002...）
+            if (role.getRoleCode() == null || role.getRoleCode().isEmpty()) {
+                long count = roleRepository.count();
+                String roleCode = String.format("R%03d", count + 1);
+                role.setRoleCode(roleCode);
+            } else {
+                // 检查角色代码唯一性
+                if (roleRepository.findByRoleCode(role.getRoleCode()).isPresent()) {
+                    throw new RuntimeException("角色代码已存在");
+                }
             }
         } else {
             // 更新时检查唯一性（排除自己）
             Optional<SysRole> existing = roleRepository.findByRoleName(role.getRoleName());
             if (existing.isPresent() && !existing.get().getId().equals(role.getId())) {
                 throw new RuntimeException("角色名已存在");
+            }
+
+            // 检查角色代码唯一性（排除自己）
+            Optional<SysRole> existingCode = roleRepository.findByRoleCode(role.getRoleCode());
+            if (existingCode.isPresent() && !existingCode.get().getId().equals(role.getId())) {
+                throw new RuntimeException("角色代码已存在");
             }
         }
         return roleRepository.save(role);
@@ -45,4 +64,3 @@ public class SysRoleService {
         roleRepository.deleteById(id);
     }
 }
-
