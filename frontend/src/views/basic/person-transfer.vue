@@ -21,8 +21,15 @@
         <el-table-column prop="transferDate" label="调动日期" width="120" />
         <el-table-column prop="reason" label="调动原因" min-width="200" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="scope">
+            <el-button 
+              type="info" 
+              size="small" 
+              @click="handleViewHistory(scope.row)"
+            >
+              调动记录
+            </el-button>
             <el-button 
               v-permission="{ moduleId: 'm013', action: 'update' }"
               type="primary" 
@@ -80,13 +87,31 @@
         <el-button type="primary" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 调动记录对话框 -->
+    <el-dialog
+      v-model="historyDialogVisible"
+      :title="`调动记录 - 人员 ${historyPersonId || ''}`"
+      width="800px"
+    >
+      <el-table :data="historyList" border v-loading="historyLoading">
+        <el-table-column prop="transferDate" label="调动日期" width="140" />
+        <el-table-column prop="fromRegionId" label="原片区" width="140" />
+        <el-table-column prop="toRegionId" label="目标片区" width="140" />
+        <el-table-column prop="reason" label="调动原因" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="status" label="状态" width="100" />
+      </el-table>
+      <template #footer>
+        <el-button @click="historyDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getPersonTransferList, savePersonTransfer, updatePersonTransfer, deletePersonTransfer } from '../../api/person-transfer'
+import { getPersonTransferList, savePersonTransfer, updatePersonTransfer, deletePersonTransfer, getPersonTransferByPerson } from '../../api/person-transfer'
 import { canRead, loadPermissions } from '../../utils/permission'
 
 const transferList = ref([])
@@ -94,6 +119,10 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增调动')
 const formRef = ref(null)
+const historyDialogVisible = ref(false)
+const historyLoading = ref(false)
+const historyList = ref([])
+const historyPersonId = ref('')
 
 const form = ref({
   id: null,
@@ -149,6 +178,20 @@ const handleDelete = (row) => {
       ElMessage.error(error.msg || '删除失败')
     }
   })
+}
+
+const handleViewHistory = async (row) => {
+  historyPersonId.value = row.personId
+  historyDialogVisible.value = true
+  historyLoading.value = true
+  try {
+    const res = await getPersonTransferByPerson(row.personId)
+    historyList.value = res.data || []
+  } catch (error) {
+    ElMessage.error(error.msg || '加载调动记录失败')
+  } finally {
+    historyLoading.value = false
+  }
 }
 
 const handleSubmit = async () => {

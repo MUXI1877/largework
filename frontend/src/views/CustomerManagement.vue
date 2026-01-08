@@ -324,6 +324,7 @@ import {
   getAfterSales,
   getCustomerVisits
 } from '../api/customer'
+import { filterValidCustomers } from '../utils/customer'
 
 const loading = ref(false)
 const customerList = ref([])
@@ -396,12 +397,21 @@ const keyPersonRules = {
 const loadData = async () => {
   loading.value = true
   try {
+    // 先清空列表，确保不会显示旧数据
+    customerList.value = []
+    
     const res = await getCustomerList()
-    customerList.value = res.data || []
+    let data = res.data || []
+    
+    // 过滤掉没有有效ID的记录（这些是未保存到数据库的记录）
+    data = filterValidCustomers(data)
+    
+    customerList.value = data
+    
     // 简单过滤
     if (queryForm.unitName) {
       customerList.value = customerList.value.filter(c => 
-        c.unitName.includes(queryForm.unitName)
+        c.unitName && c.unitName.includes(queryForm.unitName)
       )
     }
     if (queryForm.region) {
@@ -409,8 +419,12 @@ const loadData = async () => {
         c.region && c.region.includes(queryForm.region)
       )
     }
+    
+    console.log('加载的客户数据:', customerList.value.length, '条')
   } catch (error) {
-    ElMessage.error('加载数据失败')
+    console.error('加载数据失败:', error)
+    ElMessage.error('加载数据失败：' + (error.message || '未知错误'))
+    customerList.value = [] // 出错时也清空列表
   } finally {
     loading.value = false
   }
@@ -421,15 +435,18 @@ const handleQuery = () => {
 }
 
 const handleReset = () => {
+  // 先清空查询条件
   queryForm.unitName = ''
   queryForm.region = ''
+  // 清空列表，然后重新加载
+  customerList.value = []
   loadData()
 }
 
 const handleAdd = () => {
   dialogTitle.value = '新增客户'
   Object.assign(formData, {
-    id: '',
+    id: null,  // 新增时ID必须为null，不能是空字符串
     customerCode: '',
     unitName: '',
     region: '',
@@ -464,12 +481,31 @@ const handleSave = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        await saveCustomer(formData)
-        ElMessage.success('保存成功')
-        dialogVisible.value = false
-        loadData()
+        // 准备保存的数据，确保新增时id为null或undefined
+        const saveData = { ...formData }
+        if (!saveData.id || saveData.id === '') {
+          delete saveData.id  // 删除空字符串的id，让后端识别为新增
+        }
+        
+        console.log('准备保存的客户数据:', JSON.stringify(saveData, null, 2))
+        
+        const res = await saveCustomer(saveData)
+        console.log('保存响应:', res)
+        
+        if (res && res.code === 200) {
+          ElMessage.success(res.message || '保存成功')
+          dialogVisible.value = false
+          // 延迟一下再加载数据，确保数据库事务已提交
+          setTimeout(() => {
+            loadData()  // 重新加载数据，确保显示数据库中的最新数据
+          }, 100)
+        } else {
+          ElMessage.error(res?.message || '保存失败')
+        }
       } catch (error) {
-        ElMessage.error(error.message || '保存失败')
+        console.error('保存客户失败:', error)
+        const errorMessage = error.response?.data?.message || error.message || '保存失败'
+        ElMessage.error(errorMessage)
       }
     }
   })
@@ -482,11 +518,47 @@ const handleDelete = async (row) => {
     type: 'warning'
   }).then(async () => {
     try {
-      await deleteCustomer(row.id)
-      ElMessage.success('删除成功')
-      loadData()
+      console.log('准备删除客户，ID:', row.id, '客户编号:', row.customerCode, '单位名称:', row.unitName)
+      
+      if (!row.id) {
+        // 如果ID不存在，直接从列表中移除
+        const index = customerList.value.findIndex(c => c.customerCode === row.customerCode)
+        if (index > -1) {
+          customerList.value.splice(index, 1)
+          ElMessage.success('已从列表中移除（该记录在数据库中不存在）')
+        } else {
+          ElMessage.warning('记录不存在，已刷新列表')
+          loadData()
+        }
+        return
+      }
+      
+      const res = await deleteCustomer(row.id)
+      console.log('删除响应:', res)
+      
+      if (res && res.code === 200) {
+        ElMessage.success(res.message || '删除成功')
+        loadData()
+      } else {
+        ElMessage.error(res?.message || '删除失败')
+      }
     } catch (error) {
-      ElMessage.error(error.message || '删除失败')
+      console.error('删除客户失败:', error)
+      
+      // 如果是404错误，说明客户在数据库中不存在，直接从列表中移除
+      if (error.response?.status === 404) {
+        const index = customerList.value.findIndex(c => c.id === row.id || c.customerCode === row.customerCode)
+        if (index > -1) {
+          customerList.value.splice(index, 1)
+          ElMessage.success('已从列表中移除（该记录在数据库中不存在）')
+        } else {
+          ElMessage.warning('记录不存在，已刷新列表')
+          loadData()
+        }
+      } else {
+        const errorMessage = error.response?.data?.message || error.message || '删除失败'
+        ElMessage.error(errorMessage)
+      }
     }
   })
 }

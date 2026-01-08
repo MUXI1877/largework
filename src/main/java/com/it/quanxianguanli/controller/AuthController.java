@@ -37,11 +37,12 @@ public class AuthController {
             return Result.error("用户名或密码错误");
         }
 
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRoleId());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRoleId(), user.getId());
         Map<String, Object> data = new HashMap<>();
         data.put("token", token);
         data.put("username", user.getUsername());
         data.put("roleId", user.getRoleId());
+        data.put("userId", user.getId());
         return Result.success(data);
     }
 }

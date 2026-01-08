@@ -49,13 +49,21 @@ public class ReceivableController {
     }
 
     @PostMapping("/receivable-plan")
-    public ReceivablePlan createPlan(@RequestBody ReceivablePlan plan) {
-        return planService.save(plan);
+    public Result<ReceivablePlan> createPlan(@RequestBody ReceivablePlan plan) {
+        try {
+            ReceivablePlan saved = planService.save(plan);
+            return Result.success("保存成功", saved);
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("保存失败: " + e.getMessage());
+        }
     }
 
     @PutMapping("/receivable-plan/{id}")
     public ReceivablePlan updatePlan(@PathVariable String id, @RequestBody ReceivablePlan req) {
-        return planService.updateBasicInfo(id, req.getDueDate(), req.getOwner(), req.getRemarks());
+        return planService.update(id, req);
     }
 
     @RequestMapping(value = "/receivable-plan/{id}", method = RequestMethod.DELETE)
@@ -108,6 +116,19 @@ public class ReceivableController {
     @PostMapping("/receivable-receipt")
     public ReceivableReceipt createReceipt(@RequestBody ReceivableReceipt receipt) {
         return receiptService.create(receipt);
+    }
+
+    @PutMapping("/receivable-receipt/{id}")
+    public Result<ReceivableReceipt> updateReceipt(@PathVariable String id, @RequestBody ReceivableReceipt req) {
+        try {
+            ReceivableReceipt updated = receiptService.update(id, req);
+            return Result.success("更新成功", updated);
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("更新失败: " + e.getMessage());
+        }
     }
 
     @PutMapping("/receivable-receipt/{id}/remark")
@@ -179,6 +200,20 @@ public class ReceivableController {
         }).collect(Collectors.toList());
         Workbook wb = ExcelUtil.createWorkbook(headers, data);
         ExcelUtil.exportToResponse(response, wb, "receivable_summary.xlsx");
+    }
+
+    // 根据合同号查询合同信息（用于回款登记自动填充）
+    @GetMapping("/receivable-receipt/contract-info")
+    public Result<ReceivableReceiptService.ContractInfo> getContractInfo(@RequestParam String contractCode) {
+        try {
+            ReceivableReceiptService.ContractInfo info = receiptService.getContractInfo(contractCode);
+            return Result.success("查询成功", info);
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("查询失败: " + e.getMessage());
+        }
     }
 }
 

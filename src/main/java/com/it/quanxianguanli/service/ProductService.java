@@ -79,6 +79,8 @@ public class ProductService {
 
     // 库存查询（排除已标记降库的产品）
     public List<Product> queryInventory(String drawingNumber, String name, Boolean isStagnant) {
+        System.out.println("ProductService.queryInventory - drawingNumber: " + drawingNumber + ", name: " + name + ", isStagnant: " + isStagnant);
+        
         Specification<Product> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             
@@ -97,13 +99,27 @@ public class ProductService {
             }
             
             if (isStagnant != null) {
-                predicates.add(cb.equal(root.get("isStagnant"), isStagnant));
+                if (isStagnant) {
+                    // 选择"是"：只查询 isStagnant = true 的记录
+                    System.out.println("添加条件: isStagnant = true");
+                    predicates.add(cb.equal(root.get("isStagnant"), true));
+                } else {
+                    // 选择"否"：查询 isStagnant = false 或 isStagnant = null 的记录
+                    // 注意：在 SQL 中，NULL 值不能用 = 比较，必须用 IS NULL
+                    System.out.println("添加条件: isStagnant = false OR isStagnant IS NULL");
+                    predicates.add(cb.or(
+                        cb.equal(root.get("isStagnant"), false),
+                        cb.isNull(root.get("isStagnant"))
+                    ));
+                }
             }
             
             return cb.and(predicates.toArray(new Predicate[0]));
         };
         
-        return productRepository.findAll(spec);
+        List<Product> result = productRepository.findAll(spec);
+        System.out.println("ProductService.queryInventory - 查询结果数量: " + (result != null ? result.size() : 0));
+        return result;
     }
 
     // 降库产品查询（支持多条件筛选，排除已标记降库的产品）

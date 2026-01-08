@@ -15,6 +15,14 @@ public class PersonTransferController {
   @Autowired
   private PersonTransferService personTransferService;
 
+  /**
+   * 按人员ID查看调动记录（时间倒序）
+   */
+  @GetMapping("/person/{personId}")
+  public Result<List<PersonTransfer>> listByPerson(@PathVariable String personId) {
+    return Result.success(personTransferService.findByPersonId(personId));
+  }
+
   @GetMapping("/list")
   public Result<List<PersonTransfer>> list() {
     return Result.success(personTransferService.findAll());

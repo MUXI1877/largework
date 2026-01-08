@@ -21,6 +21,10 @@ export const submitProjectOpportunity = (id) => {
   return request.post(`/project-opportunity/${id}/submit`)
 }
 
+export const uploadToSuperAdmin = (id) => {
+  return request.post(`/project-opportunity/${id}/upload`)
+}
+
 export const transferRegions = (id, data) => {
   return request.post(`/project-opportunity/${id}/transfer-regions`, data)
 }

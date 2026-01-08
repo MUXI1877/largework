@@ -73,13 +73,30 @@ public class CustomerController {
 
     @PostMapping("/save")
     public Result<Customer> save(@RequestBody Customer customer, HttpServletRequest request) {
-        if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanAdd()))) {
-            return forbidden();
+        // 处理空字符串ID，将其设置为null以便正确识别为新增
+        if (customer.getId() != null && customer.getId().trim().isEmpty()) {
+            customer.setId(null);
         }
+        
+        // 根据是否有ID判断是新增还是修改
+        boolean isNew = customer.getId() == null || customer.getId().trim().isEmpty();
+        
+        // 权限检查：新增需要canAdd权限，修改需要canUpdate权限
+        if (isNew) {
+            if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanAdd()))) {
+                return forbidden();
+            }
+        } else {
+            if (!hasPermission(request, MODULE_CUSTOMER, p -> Boolean.TRUE.equals(p.getCanUpdate()))) {
+                return forbidden();
+            }
+        }
+        
         try {
             Customer saved = customerService.save(customer);
             return Result.success("保存成功", saved);
         } catch (Exception e) {
+            e.printStackTrace(); // 打印异常堆栈，便于调试
             return Result.error(e.getMessage());
         }
     }
@@ -90,9 +107,14 @@ public class CustomerController {
             return forbidden();
         }
         try {
+            // 检查客户是否存在
+            if (!customerService.findById(id).isPresent()) {
+                return Result.error(404, "客户不存在，可能已被删除");
+            }
             customerService.delete(id);
             return Result.success("删除成功", null);
         } catch (Exception e) {
+            e.printStackTrace(); // 打印异常堆栈，便于调试
             return Result.error(e.getMessage());
         }
     }

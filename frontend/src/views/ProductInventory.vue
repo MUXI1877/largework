@@ -74,10 +74,15 @@ const loadData = async () => {
     const params = {}
     if (queryForm.value.drawingNumber) params.drawingNumber = queryForm.value.drawingNumber
     if (queryForm.value.name) params.name = queryForm.value.name
-    if (queryForm.value.isStagnant !== null) params.isStagnant = queryForm.value.isStagnant
+    if (queryForm.value.isStagnant !== null && queryForm.value.isStagnant !== undefined) {
+      // 确保布尔值正确传递，false 也会被包含
+      params.isStagnant = queryForm.value.isStagnant
+    }
 
+    console.log('查询参数:', params) // 调试日志
     const res = await queryInventory(params)
     productList.value = res.data || []
+    console.log('查询结果数量:', productList.value.length) // 调试日志
   } catch (error) {
     ElMessage.error(error.message || '加载数据失败')
   } finally {
@@ -103,7 +108,10 @@ const handleExport = async () => {
     const params = {}
     if (queryForm.value.drawingNumber) params.drawingNumber = queryForm.value.drawingNumber
     if (queryForm.value.name) params.name = queryForm.value.name
-    if (queryForm.value.isStagnant !== null) params.isStagnant = queryForm.value.isStagnant
+    if (queryForm.value.isStagnant !== null && queryForm.value.isStagnant !== undefined) {
+      // 确保布尔值正确传递，false 也会被包含
+      params.isStagnant = queryForm.value.isStagnant
+    }
 
     const res = await exportInventory(params)
     const blob = new Blob([res], {

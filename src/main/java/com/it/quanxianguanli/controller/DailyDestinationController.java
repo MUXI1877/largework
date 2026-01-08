@@ -41,7 +41,7 @@ public class DailyDestinationController {
     }
 
     private boolean hasPermission(HttpServletRequest request, String moduleId,
-                                  Predicate<SysPermission> predicate) {
+            Predicate<SysPermission> predicate) {
         if (isAdmin(request)) {
             return true;
         }
@@ -59,14 +59,19 @@ public class DailyDestinationController {
     }
 
     @GetMapping("/list")
-    public Result<List<DailyDestination>> list(@RequestParam(required = false) String userId, HttpServletRequest request) {
+    public Result<List<DailyDestination>> list(@RequestParam(required = false) String userId,
+            HttpServletRequest request) {
         if (!hasPermission(request, MODULE_DAILY_DESTINATION, p -> Boolean.TRUE.equals(p.getCanRead()))) {
             return forbidden();
         }
+        List<DailyDestination> list;
         if (userId != null && !userId.isEmpty()) {
-            return Result.success(dailyDestinationService.findByUserId(userId));
+            list = dailyDestinationService.findByUserId(userId);
+        } else {
+            list = dailyDestinationService.findAll();
         }
-        return Result.success(dailyDestinationService.findAll());
+        fillUserNames(list);
+        return Result.success(list);
     }
 
     @GetMapping("/{id}")
@@ -78,6 +83,7 @@ public class DailyDestinationController {
         if (destination == null) {
             return Result.error("去向记录不存在");
         }
+        fillUserName(destination);
         return Result.success(destination);
     }
 
@@ -97,7 +103,7 @@ public class DailyDestinationController {
             if (dailyDestination.getLocation() == null || dailyDestination.getLocation().trim().isEmpty()) {
                 return Result.error("地点不能为空");
             }
-            
+
             // 如果userId为空，从request中获取当前用户ID
             if (dailyDestination.getUserId() == null || dailyDestination.getUserId().isEmpty()) {
                 String username = (String) request.getAttribute("username");
@@ -132,6 +138,25 @@ public class DailyDestinationController {
             return Result.error("ID不能为空");
         }
         try {
+            // 非管理员只能修改自己的去向记录
+            if (!isAdmin(request)) {
+                DailyDestination existing = dailyDestinationService.findById(dailyDestination.getId());
+                if (existing == null) {
+                    return Result.error("去向记录不存在");
+                }
+                String username = (String) request.getAttribute("username");
+                String currentUserId = null;
+                if (username != null) {
+                    currentUserId = userService.findByUsername(username)
+                            .map(u -> u.getId())
+                            .orElse(null);
+                }
+                if (currentUserId == null || !currentUserId.equals(existing.getUserId())) {
+                    return forbidden();
+                }
+                // 确保不会通过前端伪造 userId 篡改归属
+                dailyDestination.setUserId(existing.getUserId());
+            }
             DailyDestination saved = dailyDestinationService.save(dailyDestination);
             return Result.success("更新成功", saved);
         } catch (Exception e) {
@@ -145,6 +170,23 @@ public class DailyDestinationController {
             return forbidden();
         }
         try {
+            // 非管理员只能删除自己的去向记录
+            if (!isAdmin(request)) {
+                DailyDestination existing = dailyDestinationService.findById(id);
+                if (existing == null) {
+                    return Result.error("去向记录不存在");
+                }
+                String username = (String) request.getAttribute("username");
+                String currentUserId = null;
+                if (username != null) {
+                    currentUserId = userService.findByUsername(username)
+                            .map(u -> u.getId())
+                            .orElse(null);
+                }
+                if (currentUserId == null || !currentUserId.equals(existing.getUserId())) {
+                    return forbidden();
+                }
+            }
             dailyDestinationService.deleteById(id);
             return Result.success("删除成功", null);
         } catch (Exception e) {
@@ -153,7 +195,8 @@ public class DailyDestinationController {
     }
 
     @GetMapping("/export")
-    public void export(HttpServletResponse response, @RequestParam(required = false) String userId, HttpServletRequest request) {
+    public void export(HttpServletResponse response, @RequestParam(required = false) String userId,
+            HttpServletRequest request) {
         if (!hasPermission(request, MODULE_DAILY_DESTINATION, p -> Boolean.TRUE.equals(p.getCanRead()))) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
@@ -188,5 +231,34 @@ public class DailyDestinationController {
             throw new RuntimeException("导出失败：" + e.getMessage(), e);
         }
     }
-}
 
+    /** 为去向记录填充填报人姓名，便于前端展示 */
+    private void fillUserNames(List<DailyDestination> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        // 收集本次涉及到的用户ID，一次性查询，避免 N+1 也避免查无关用户
+        java.util.Set<String> userIds = new java.util.HashSet<>();
+        for (DailyDestination d : list) {
+            if (d.getUserId() != null && !d.getUserId().isEmpty()) {
+                userIds.add(d.getUserId());
+            }
+        }
+        List<com.it.quanxianguanli.entity.SysUser> users = userService.findByIds(userIds);
+        java.util.Map<String, String> idNameMap = new java.util.HashMap<>();
+        for (com.it.quanxianguanli.entity.SysUser u : users) {
+            idNameMap.put(u.getId(), u.getName());
+        }
+        for (DailyDestination d : list) {
+            d.setUserName(idNameMap.get(d.getUserId()));
+        }
+    }
+
+    private void fillUserName(DailyDestination destination) {
+        if (destination == null) {
+            return;
+        }
+        userService.findById(destination.getUserId())
+                .ifPresent(u -> destination.setUserName(u.getName()));
+    }
+}

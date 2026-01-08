@@ -6,5 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PersonTransferRepository extends JpaRepository<PersonTransfer, String> {
+
+    java.util.List<PersonTransfer> findByPersonIdOrderByTransferDateDesc(String personId);
 }
 

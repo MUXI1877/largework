@@ -72,6 +72,7 @@
               type="warning" 
               size="small" 
               @click="openPlanDialog(scope.row)"
+              :disabled="!scope.row.id"
             >
               修改
             </el-button>
@@ -80,6 +81,7 @@
               type="danger" 
               size="small" 
               @click="handleDelete(scope.row)"
+              :disabled="!scope.row.id"
             >
               删除
             </el-button>
@@ -114,8 +116,39 @@
         <el-form-item label="应付金额" required>
           <el-input-number v-model="planForm.dueAmount" :min="0" :precision="2" :step="100" />
         </el-form-item>
+        <el-form-item label="已付金额">
+          <el-input-number 
+            v-model="planForm.paidAmount" 
+            :min="0" 
+            :max="planForm.dueAmount || undefined"
+            :precision="2" 
+            :step="100" 
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 4px;">
+            已付金额不能超过应付金额
+          </div>
+        </el-form-item>
         <el-form-item label="应付时间">
           <el-date-picker v-model="planForm.dueDate" type="date" placeholder="选择日期" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="付款日期">
+          <el-date-picker 
+            v-model="planForm.paidDate" 
+            type="date" 
+            placeholder="选择日期" 
+            :disabled-date="(date) => {
+              if (!planForm.dueDate) return false
+              const dueDate = new Date(planForm.dueDate)
+              dueDate.setHours(0, 0, 0, 0)
+              date.setHours(0, 0, 0, 0)
+              return date < dueDate
+            }"
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 4px;">
+            付款日期不能早于应付时间
+          </div>
         </el-form-item>
         <el-form-item label="责任人">
           <el-input v-model="planForm.owner" />
@@ -168,7 +201,9 @@ const planForm = reactive({
   contractName: '',
   paymentStageName: '',
   dueAmount: null,
+  paidAmount: null,
   dueDate: '',
+  paidDate: '',
   owner: '',
   remarks: ''
 })
@@ -199,8 +234,17 @@ const loadData = async () => {
       size: pagination.size
     }
     const res = await getReceivablePlans(params)
-    list.value = res.data?.content || []
+    const dataList = res.data?.content || []
+    // 过滤掉没有ID的记录，并添加调试信息
+    list.value = dataList.filter(item => {
+      if (!item || !item.id) {
+        console.warn('发现没有ID的记录:', item)
+        return false
+      }
+      return true
+    })
     pagination.total = res.data?.totalElements || 0
+    console.log('加载的数据:', list.value.map(item => ({ id: item.id, contractCode: item.contractCode })))
   } catch (e) {
     ElMessage.error(e.message || '加载失败')
   } finally {
@@ -237,16 +281,35 @@ const handlePageChange = (val) => {
 
 const openPlanDialog = (row) => {
   planDialogTitle.value = row ? '修改计划' : '新增计划'
-  Object.assign(planForm, {
-    id: row?.id || null,
-    contractCode: row?.contractCode || '',
-    contractName: row?.contractName || '',
-    paymentStageName: row?.paymentStageName || '',
-    dueAmount: row?.dueAmount || null,
-    dueDate: row?.dueDate || '',
-    owner: row?.owner || '',
-    remarks: row?.remarks || ''
-  })
+  if (row) {
+    // 修改：复制所有字段，确保 id 存在
+    Object.assign(planForm, {
+      id: row.id || null,
+      contractCode: row.contractCode || '',
+      contractName: row.contractName || '',
+      paymentStageName: row.paymentStageName || '',
+      dueAmount: row.dueAmount || null,
+      paidAmount: row.paidAmount || 0,
+      dueDate: row.dueDate || '',
+      paidDate: row.paidDate || '',
+      owner: row.owner || '',
+      remarks: row.remarks || ''
+    })
+  } else {
+    // 新增：重置所有字段
+    Object.assign(planForm, {
+      id: null,
+      contractCode: '',
+      contractName: '',
+      paymentStageName: '',
+      dueAmount: null,
+      paidAmount: 0,
+      dueDate: '',
+      paidDate: '',
+      owner: '',
+      remarks: ''
+    })
+  }
   planDialogVisible.value = true
 }
 
@@ -260,13 +323,52 @@ const savePlan = async () => {
       ElMessage.warning('请填写应付金额')
       return
     }
-    const payload = { ...planForm }
-    // 新增时，确保id为null或undefined，不发送id字段
-    if (!planForm.id || planForm.id === '') {
-      delete payload.id
-      await createReceivablePlan(payload)
-    } else {
+    
+    // 验证已付金额不能超过应付金额
+    if (planForm.paidAmount != null && planForm.paidAmount > 0) {
+      if (planForm.paidAmount > planForm.dueAmount) {
+        ElMessage.warning('已付金额不能超过应付金额')
+        return
+      }
+    }
+    
+    // 验证付款日期不能早于应付时间
+    if (planForm.paidDate && planForm.dueDate) {
+      const paidDateStr = typeof planForm.paidDate === 'string' ? planForm.paidDate : planForm.paidDate
+      const dueDateStr = typeof planForm.dueDate === 'string' ? planForm.dueDate : planForm.dueDate
+      const paidDate = new Date(paidDateStr)
+      const dueDate = new Date(dueDateStr)
+      // 只比较日期部分，忽略时间
+      paidDate.setHours(0, 0, 0, 0)
+      dueDate.setHours(0, 0, 0, 0)
+      if (paidDate < dueDate) {
+        ElMessage.warning('付款日期不能早于应付时间')
+        return
+      }
+    }
+    
+    // 判断是新增还是修改
+    const isEdit = planForm.id && planForm.id !== '' && planForm.id !== null && planForm.id !== undefined
+    
+    // 构建payload，包含所有可修改的字段
+    const payload = {
+      contractCode: planForm.contractCode,
+      contractName: planForm.contractName,
+      paymentStageName: planForm.paymentStageName,
+      dueAmount: planForm.dueAmount,
+      paidAmount: planForm.paidAmount || 0,
+      dueDate: planForm.dueDate,
+      paidDate: planForm.paidDate || null,
+      owner: planForm.owner,
+      remarks: planForm.remarks
+    }
+    
+    if (isEdit) {
+      // 修改：传递对象（不包含id，id在URL路径中）
       await updateReceivablePlan(planForm.id, payload)
+    } else {
+      // 新增：不传递 id
+      await createReceivablePlan(payload)
     }
     ElMessage.success('保存成功')
     planDialogVisible.value = false
@@ -277,16 +379,34 @@ const savePlan = async () => {
 }
 
 const handleDelete = (row) => {
+  console.log('删除操作 - row数据:', row)
+  console.log('删除操作 - row.id:', row?.id)
+  
+  if (!row) {
+    ElMessage.error('无法删除：记录数据不存在')
+    return
+  }
+  
+  if (!row.id || row.id === '' || row.id === null || row.id === undefined) {
+    console.error('记录缺少ID:', row)
+    ElMessage.error('无法删除：记录ID不存在，请刷新页面后重试')
+    // 尝试重新加载数据
+    loadData()
+    return
+  }
+  
   ElMessageBox.confirm('确定要删除该应收账计划记录吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
     try {
+      console.log('执行删除，ID:', row.id)
       await deleteReceivablePlan(row.id)
       ElMessage.success('删除成功')
       loadData()
     } catch (e) {
+      console.error('删除失败:', e)
       ElMessage.error(e.message || e.msg || '删除失败')
     }
   }).catch(() => {

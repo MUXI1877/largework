@@ -38,22 +38,54 @@ public class CustomerService {
         return customerRepository.findById(id);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Customer save(Customer customer) {
-        // 客户名称唯一性检查
-        if (customer.getId() == null || customer.getId().isEmpty()) {
-            // 新增
-            if (customerRepository.findByUnitName(customer.getUnitName()).isPresent()) {
-                throw new RuntimeException("客户名称已存在，不能重复录入");
-            }
-        } else {
-            // 修改
-            Optional<Customer> existing = customerRepository.findByUnitName(customer.getUnitName());
-            if (existing.isPresent() && !existing.get().getId().equals(customer.getId())) {
-                throw new RuntimeException("客户名称已存在，不能重复录入");
+        // 处理空字符串ID，将其设置为null以便JPA正确识别为新增
+        if (customer.getId() != null && customer.getId().trim().isEmpty()) {
+            customer.setId(null);
+        }
+        
+        boolean isNew = customer.getId() == null || customer.getId().trim().isEmpty();
+        
+        // 客户编号唯一性检查
+        if (customer.getCustomerCode() != null && !customer.getCustomerCode().trim().isEmpty()) {
+            Optional<Customer> existingByCode = customerRepository.findByCustomerCode(customer.getCustomerCode());
+            if (isNew) {
+                // 新增
+                if (existingByCode.isPresent()) {
+                    throw new RuntimeException("客户编号已存在，不能重复录入");
+                }
+            } else {
+                // 修改
+                if (existingByCode.isPresent() && !existingByCode.get().getId().equals(customer.getId())) {
+                    throw new RuntimeException("客户编号已存在，不能重复录入");
+                }
             }
         }
-        return customerRepository.save(customer);
+        
+        // 客户名称唯一性检查
+        if (customer.getUnitName() != null && !customer.getUnitName().trim().isEmpty()) {
+            Optional<Customer> existingByName = customerRepository.findByUnitName(customer.getUnitName());
+            if (isNew) {
+                // 新增
+                if (existingByName.isPresent()) {
+                    throw new RuntimeException("客户名称已存在，不能重复录入");
+                }
+            } else {
+                // 修改
+                if (existingByName.isPresent() && !existingByName.get().getId().equals(customer.getId())) {
+                    throw new RuntimeException("客户名称已存在，不能重复录入");
+                }
+            }
+        }
+        
+        // 保存客户信息
+        Customer saved = customerRepository.save(customer);
+        
+        // 确保数据已刷新到数据库
+        customerRepository.flush();
+        
+        return saved;
     }
 
     @Transactional

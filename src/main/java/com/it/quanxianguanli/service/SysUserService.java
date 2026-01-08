@@ -58,6 +58,20 @@ public class SysUserService {
         return userRepository.findAll();
     }
 
+    public Optional<SysUser> findById(String id) {
+        return userRepository.findById(id);
+    }
+
+    /**
+     * 批量查询用户，避免单条查询产生 N+1
+     */
+    public List<SysUser> findByIds(java.util.Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return userRepository.findAllById(ids);
+    }
+
     @Transactional
     public SysUser assignRole(String userId, String roleId) {
         SysUser user = userRepository.findById(userId)
@@ -70,4 +84,3 @@ public class SysUserService {
         return userRepository.findByUsername(username);
     }
 }
-

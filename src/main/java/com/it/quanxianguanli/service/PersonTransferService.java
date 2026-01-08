@@ -18,6 +18,10 @@ public class PersonTransferService {
     return personTransferRepository.findAll();
   }
 
+  public List<PersonTransfer> findByPersonId(String personId) {
+    return personTransferRepository.findByPersonIdOrderByTransferDateDesc(personId);
+  }
+
   public PersonTransfer findById(String id) {
     return personTransferRepository.findById(id).orElse(null);
   }

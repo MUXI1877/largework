@@ -48,6 +48,13 @@ const handleLogin = async () => {
       try {
         const res = await login(loginForm.username, loginForm.password)
         setToken(res.data.token)
+        // 保存用户信息
+        if (res.data.roleId) {
+          localStorage.setItem('roleId', res.data.roleId)
+        }
+        if (res.data.userId) {
+          localStorage.setItem('userId', res.data.userId)
+        }
         ElMessage.success('登录成功')
         router.push('/')
       } catch (error) {

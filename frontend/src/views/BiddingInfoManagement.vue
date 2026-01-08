@@ -156,6 +156,19 @@
             placeholder="请输入备注"
           />
         </el-form-item>
+        <!-- 展示投标总结相关信息（只读），方便在“查看”时看到已填写的总结 -->
+        <el-form-item label="投标结果">
+          <el-input v-model="formData.biddingResult" disabled placeholder="尚未填写投标总结" />
+        </el-form-item>
+        <el-form-item label="投标总结">
+          <el-input
+            v-model="formData.biddingSummary"
+            type="textarea"
+            :rows="4"
+            disabled
+            placeholder="尚未填写投标总结"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -214,6 +227,7 @@ import {
 } from '../api/biddingInfo'
 import { getProjectOpportunityList } from '../api/projectOpportunity'
 import { getToken } from '../utils/auth'
+import { loadPermissions } from '../utils/permission'
 
 const loading = ref(false)
 const biddingList = ref([])
@@ -247,6 +261,10 @@ const formData = ref({
   projectName: '',
   technicalSolution: '',
   quotationFile: '',
+  // 投标总结相关字段，用于在“查看/编辑”对话框中展示
+  biddingResult: '',
+  biddingSummary: '',
+  attachment: '',
   remarks: ''
 })
 
@@ -315,6 +333,9 @@ const handleAdd = () => {
     projectName: '',
     technicalSolution: '',
     quotationFile: '',
+    biddingResult: '',
+    biddingSummary: '',
+    attachment: '',
     remarks: ''
   }
   dialogVisible.value = true
@@ -354,10 +375,11 @@ const handleDelete = (row) => {
 
 const handleSummary = (row) => {
   currentBidding.value = row
+  // 如果该投标已经有总结信息，打开弹窗时回显出来；否则为空
   summaryForm.value = {
-    biddingResult: '',
-    biddingSummary: '',
-    attachment: ''
+    biddingResult: row.biddingResult || '',
+    biddingSummary: row.biddingSummary || '',
+    attachment: row.attachment || ''
   }
   summaryDialogVisible.value = true
 }
@@ -453,7 +475,11 @@ const handleExport = async () => {
 }
 
 onMounted(async () => {
-  await loadPermissions()
+  try {
+    await loadPermissions()
+  } catch (error) {
+    console.error('加载权限失败:', error)
+  }
   loadOpportunities()
   loadData()
 })

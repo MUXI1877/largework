@@ -44,12 +44,19 @@
             {{ formatDateTime(scope.row.destinationTime) }}
           </template>
         </el-table-column>
+        <el-table-column prop="userName" label="填报人" width="120">
+          <template #default="scope">
+            {{ scope.row.userName || '—' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="activityName" label="营销活动名称" min-width="200" show-overflow-tooltip />
         <el-table-column prop="location" label="地点" min-width="150" show-overflow-tooltip />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="scope">
+            <!-- 管理员可以操作所有记录，普通用户只能操作自己的记录 -->
             <el-button 
               v-permission="{ moduleId: 'm024', action: 'update' }"
+              v-if="isAdmin || scope.row.userId === currentUserId"
               type="primary" 
               size="small" 
               @click="handleEdit(scope.row)"
@@ -58,6 +65,7 @@
             </el-button>
             <el-button 
               v-permission="{ moduleId: 'm024', action: 'delete' }"
+              v-if="isAdmin || scope.row.userId === currentUserId"
               type="danger" 
               size="small" 
               @click="handleDelete(scope.row)"
@@ -80,7 +88,7 @@
           <div class="person-count">{{ item.count }}人</div>
           <div class="person-list">
             <el-tag v-for="person in item.persons" :key="person.userId" style="margin: 2px">
-              {{ person.activityName }}
+            {{ person.userName || person.activityName || person.userId }}
             </el-tag>
           </div>
         </div>
@@ -131,13 +139,17 @@ import {
   deleteDailyDestination,
   exportDailyDestinations
 } from '../../api/daily-destination'
-import { getToken } from '../../utils/auth'
+import { getUserId, getRoleId, isSuperAdmin, isSystemAdmin } from '../../utils/auth'
 
 const destinationList = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增去向')
 const formRef = ref(null)
+
+// 当前登录用户ID和是否管理员标记
+const currentUserId = ref(getUserId())
+const isAdmin = ref(isSuperAdmin() || isSystemAdmin() || getRoleId() === 'r001' || getRoleId() === 'r002')
 
 const queryForm = ref({
   activityName: '',
@@ -191,6 +203,7 @@ const dashboardData = computed(() => {
     data.count++
     data.persons.push({
       userId: item.userId,
+      userName: item.userName,
       activityName: item.activityName
     })
   })

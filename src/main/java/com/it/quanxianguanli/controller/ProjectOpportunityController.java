@@ -68,8 +68,24 @@ public class ProjectOpportunityController {
         if (!hasPermission(request, MODULE_PROJECT_OPPORTUNITY, p -> Boolean.TRUE.equals(p.getCanRead()))) {
             return forbidden();
         }
-        List<ProjectOpportunity> opportunities = projectOpportunityService.findByConditions(
-                opportunityName, startDate, endDate, status, source, industry);
+        
+        // 获取当前用户信息
+        Object userIdObj = request.getAttribute("userId");
+        Object roleIdObj = request.getAttribute("roleId");
+        String userId = userIdObj != null ? userIdObj.toString() : null;
+        String roleId = roleIdObj != null ? roleIdObj.toString() : null;
+        
+        List<ProjectOpportunity> opportunities;
+        
+        // 根据角色查询数据
+        if (userId != null && roleId != null) {
+            opportunities = projectOpportunityService.findByUserRole(
+                    userId, roleId, opportunityName, startDate, endDate, status, source, industry);
+        } else {
+            // 如果没有用户信息，返回空列表
+            opportunities = new ArrayList<>();
+        }
+        
         return Result.success(opportunities);
     }
 
@@ -89,15 +105,37 @@ public class ProjectOpportunityController {
             return forbidden();
         }
         try {
+            // 获取当前用户信息
+            Object userIdObj = request.getAttribute("userId");
+            Object roleIdObj = request.getAttribute("roleId");
+            String userId = userIdObj != null ? userIdObj.toString() : null;
+            String roleId = roleIdObj != null ? roleIdObj.toString() : null;
+            
             // 检查是否已提交
             if (opportunity.getId() != null && !opportunity.getId().isEmpty()) {
                 var existing = projectOpportunityService.findById(opportunity.getId());
-                if (existing.isPresent() && existing.get().getIsSubmitted()) {
-                    return Result.error("已提交的销售机会不可修改");
+                if (existing.isPresent()) {
+                    ProjectOpportunity existingOpp = existing.get();
+                    if (existingOpp.getIsSubmitted()) {
+                        return Result.error("已提交的销售机会不可修改");
+                    }
+                    
+                    // 普通用户只能修改自己创建的机会
+                    if ("r003".equals(roleId) && userId != null && !userId.equals(existingOpp.getCreatorId())) {
+                        return Result.error("只能修改自己创建的销售机会");
+                    }
                 }
             }
             
-            ProjectOpportunity saved = projectOpportunityService.save(opportunity);
+            // 如果是新建机会，设置原始所属片区（从当前用户的areaId获取）
+            if (opportunity.getId() == null || opportunity.getId().isEmpty()) {
+                Object userAreaId = request.getAttribute("areaId");
+                if (userAreaId != null && !userAreaId.toString().isEmpty()) {
+                    opportunity.setOwnerRegionId(userAreaId.toString());
+                }
+            }
+            
+            ProjectOpportunity saved = projectOpportunityService.save(opportunity, userId);
             return Result.success("保存成功", saved);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -110,7 +148,12 @@ public class ProjectOpportunityController {
             return forbidden();
         }
         try {
-            projectOpportunityService.delete(id);
+            Object userIdObj = request.getAttribute("userId");
+            Object roleIdObj = request.getAttribute("roleId");
+            String userId = userIdObj != null ? userIdObj.toString() : null;
+            String roleId = roleIdObj != null ? roleIdObj.toString() : null;
+            
+            projectOpportunityService.delete(id, userId, roleId);
             return Result.success("删除成功", null);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -123,8 +166,29 @@ public class ProjectOpportunityController {
             return forbidden();
         }
         try {
-            projectOpportunityService.submit(id);
+            Object userIdObj = request.getAttribute("userId");
+            Object roleIdObj = request.getAttribute("roleId");
+            String userId = userIdObj != null ? userIdObj.toString() : null;
+            String roleId = roleIdObj != null ? roleIdObj.toString() : null;
+            
+            projectOpportunityService.submit(id, userId, roleId);
             return Result.success("提交成功", null);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/upload")
+    public Result<Void> uploadToSuperAdmin(@PathVariable String id, HttpServletRequest request) {
+        if (!hasPermission(request, MODULE_PROJECT_OPPORTUNITY, p -> Boolean.TRUE.equals(p.getCanUpdate()))) {
+            return forbidden();
+        }
+        try {
+            Object roleIdObj = request.getAttribute("roleId");
+            String roleId = roleIdObj != null ? roleIdObj.toString() : null;
+            
+            projectOpportunityService.uploadToSuperAdmin(id, roleId);
+            return Result.success("上传成功", null);
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
@@ -164,8 +228,11 @@ public class ProjectOpportunityController {
             return forbidden();
         }
         try {
+            Object roleIdObj = request.getAttribute("roleId");
+            String roleId = roleIdObj != null ? roleIdObj.toString() : null;
             String closeReason = requestBody.get("closeReason");
-            projectOpportunityService.close(id, closeReason);
+            
+            projectOpportunityService.close(id, closeReason, roleId);
             return Result.success("关闭成功", null);
         } catch (Exception e) {
             return Result.error(e.getMessage());

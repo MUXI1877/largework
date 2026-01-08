@@ -465,8 +465,97 @@ const handleDelete = (row) => {
 }
 
 const handlePrint = async (row) => {
-  // 打印功能需要前端实现，这里可以打开新窗口或使用打印插件
-  ElMessage.info('打印功能需要前端实现')
+  try {
+    // 调用后端打印数据接口，获取报价单及明细数据
+    const res = await getPrintData(row.id)
+    const { quotation, items } = res.data || {}
+
+    if (!quotation) {
+      ElMessage.error('打印数据获取失败')
+      return
+    }
+
+    const itemRows = (items || [])
+      .map(item => {
+        return '<tr>' +
+          `<td>${item.productName || ''}</td>` +
+          `<td>${item.drawingNumber || ''}</td>` +
+          `<td style="text-align: right;">${item.quantity != null ? item.quantity : ''}</td>` +
+          `<td style="text-align: right;">${item.unitPrice != null ? item.unitPrice : ''}</td>` +
+          `<td style="text-align: right;">${item.totalPrice != null ? item.totalPrice : ''}</td>` +
+        '</tr>'
+      })
+      .join('')
+
+    const rowsHtml = itemRows || '<tr><td colspan="5" style="text-align:center;">无明细</td></tr>'
+
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>销售报价单打印</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif; padding: 20px; }
+            h1 { text-align: center; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #333; padding: 6px 8px; font-size: 12px; }
+            th { background: #f5f5f5; }
+            .info-table td { border: none; padding: 4px 0; }
+            .info-table { margin-bottom: 10px; }
+          </style>
+        </head>
+        <body>
+          <h1>销售报价单</h1>
+          <table class="info-table">
+            <tr>
+              <td>报价编号：${quotation.quotationCode || ''}</td>
+              <td>报价日期：${quotation.quotationDate || ''}</td>
+            </tr>
+            <tr>
+              <td>项目名称：${quotation.projectName || ''}</td>
+              <td>报价客户：${quotation.customerName || ''}</td>
+            </tr>
+            <tr>
+              <td>报价类型：${quotation.quotationType || ''}</td>
+              <td>总价：${quotation.totalPrice != null ? quotation.totalPrice : ''}</td>
+            </tr>
+          </table>
+
+          <table>
+            <thead>
+              <tr>
+                <th>产品/零件名称</th>
+                <th>图号</th>
+                <th>数量</th>
+                <th>单价</th>
+                <th>总价</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      ElMessage.error('浏览器阻止了打印窗口，请允许弹出窗口后重试')
+      return
+    }
+    printWindow.document.open()
+    printWindow.document.write(html)
+    printWindow.document.close()
+    printWindow.focus()
+    // 稍等文档渲染完成再调用打印
+    setTimeout(() => {
+      printWindow.print()
+    }, 300)
+  } catch (error) {
+    console.error('打印失败', error)
+    ElMessage.error(error.message || '打印失败')
+  }
 }
 
 const handleOpportunityChange = (opportunityId) => {

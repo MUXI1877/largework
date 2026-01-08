@@ -35,6 +35,9 @@ public class ProjectOpportunity extends BaseEntity {
     @Column(name = "regions", length = 500)
     private String regions; // 片区（可多选，逗号分隔）
     
+    @Column(name = "owner_region_id", length = 36)
+    private String ownerRegionId; // 原始所属片区ID（创建机会的片区）
+    
     @Column(name = "opportunity_date")
     private LocalDate opportunityDate; // 销售机会日期
     
@@ -55,6 +58,9 @@ public class ProjectOpportunity extends BaseEntity {
     
     @Column(name = "is_submitted", nullable = false)
     private Boolean isSubmitted = false; // 是否已提交
+    
+    @Column(name = "creator_id", length = 36)
+    private String creatorId; // 创建人ID
 
     public String getOpportunityName() {
         return opportunityName;
@@ -128,6 +134,14 @@ public class ProjectOpportunity extends BaseEntity {
         this.regions = regions;
     }
 
+    public String getOwnerRegionId() {
+        return ownerRegionId;
+    }
+
+    public void setOwnerRegionId(String ownerRegionId) {
+        this.ownerRegionId = ownerRegionId;
+    }
+
     public LocalDate getOpportunityDate() {
         return opportunityDate;
     }
@@ -182,6 +196,14 @@ public class ProjectOpportunity extends BaseEntity {
 
     public void setIsSubmitted(Boolean isSubmitted) {
         this.isSubmitted = isSubmitted;
+    }
+
+    public String getCreatorId() {
+        return creatorId;
+    }
+
+    public void setCreatorId(String creatorId) {
+        this.creatorId = creatorId;
     }
 }
 

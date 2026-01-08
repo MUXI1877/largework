@@ -58,6 +58,15 @@ export function createReceivableReceipt(data) {
   })
 }
 
+// 更新回款记录（包含金额、日期等字段）
+export function updateReceivableReceipt(id, data) {
+  return request({
+    url: `/receivable-receipt/${id}`,
+    method: 'put',
+    data
+  })
+}
+
 export function updateReceiptRemark(id, data) {
   return request({
     url: `/receivable-receipt/${id}/remark`,
@@ -97,6 +106,15 @@ export function exportReceivableSummary(params) {
     method: 'get',
     params,
     responseType: 'blob'
+  })
+}
+
+// 根据合同号查询合同信息（用于回款登记自动填充）
+export function getContractInfo(contractCode) {
+  return request({
+    url: '/receivable-receipt/contract-info',
+    method: 'get',
+    params: { contractCode }
   })
 }
 

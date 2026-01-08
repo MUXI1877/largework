@@ -291,12 +291,32 @@ public class ProductController {
     public Result<List<Product>> queryInventory(
             @RequestParam(required = false) String drawingNumber,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) Boolean isStagnant,
+            @RequestParam(required = false) String isStagnant,
             HttpServletRequest request) {
         if (!hasPermission(request, MODULE_PRODUCT, p -> Boolean.TRUE.equals(p.getCanRead()))) {
             return forbidden();
         }
-        List<Product> products = productService.queryInventory(drawingNumber, name, isStagnant);
+        // 将字符串参数转换为 Boolean，支持 "true", "false", null
+        // axios 会将布尔值转换为字符串 "true" 或 "false"
+        Boolean isStagnantBool = null;
+        if (isStagnant != null && !isStagnant.trim().isEmpty()) {
+            // 处理 "true", "false", "True", "False" 等各种情况
+            String lowerStr = isStagnant.trim().toLowerCase();
+            if ("true".equals(lowerStr) || "1".equals(lowerStr)) {
+                isStagnantBool = true;
+            } else if ("false".equals(lowerStr) || "0".equals(lowerStr)) {
+                isStagnantBool = false;
+            }
+        }
+        System.out.println("查询库存参数 - drawingNumber: " + drawingNumber + ", name: " + name + ", isStagnant(原始): " + isStagnant + ", isStagnant(转换后): " + isStagnantBool);
+        List<Product> products = productService.queryInventory(drawingNumber, name, isStagnantBool);
+        System.out.println("查询结果数量: " + (products != null ? products.size() : 0));
+        if (products != null && !products.isEmpty()) {
+            System.out.println("前3条记录的isStagnant值: ");
+            products.stream().limit(3).forEach(p -> 
+                System.out.println("  - " + p.getName() + ": isStagnant=" + p.getIsStagnant())
+            );
+        }
         return Result.success(products);
     }
 
@@ -305,7 +325,7 @@ public class ProductController {
     public void exportInventory(
             @RequestParam(required = false) String drawingNumber,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) Boolean isStagnant,
+            @RequestParam(required = false) String isStagnant,
             HttpServletResponse response,
             HttpServletRequest request) {
         if (!hasPermission(request, MODULE_PRODUCT, p -> Boolean.TRUE.equals(p.getCanRead()))) {
@@ -313,7 +333,17 @@ public class ProductController {
             return;
         }
         try {
-            List<Product> products = productService.queryInventory(drawingNumber, name, isStagnant);
+            // 将字符串参数转换为 Boolean，支持 "true", "false", null
+            Boolean isStagnantBool = null;
+            if (isStagnant != null && !isStagnant.trim().isEmpty()) {
+                String lowerStr = isStagnant.trim().toLowerCase();
+                if ("true".equals(lowerStr) || "1".equals(lowerStr)) {
+                    isStagnantBool = true;
+                } else if ("false".equals(lowerStr) || "0".equals(lowerStr)) {
+                    isStagnantBool = false;
+                }
+            }
+            List<Product> products = productService.queryInventory(drawingNumber, name, isStagnantBool);
             
             // 构建表头（列表展示字段：图号、名称、材料、数量、是否呆滞、预计交货期）
             List<String> headers = new ArrayList<>();

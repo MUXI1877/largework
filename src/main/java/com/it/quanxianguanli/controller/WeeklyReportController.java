@@ -41,7 +41,7 @@ public class WeeklyReportController {
     }
 
     private boolean hasPermission(HttpServletRequest request, String moduleId,
-                                  Predicate<SysPermission> predicate) {
+            Predicate<SysPermission> predicate) {
         if (isAdmin(request)) {
             return true;
         }
@@ -58,27 +58,48 @@ public class WeeklyReportController {
         return Result.error(403, "无权限操作");
     }
 
+    private String getCurrentUserId(HttpServletRequest request) {
+        String username = (String) request.getAttribute("username");
+        if (username == null || username.isEmpty()) {
+            return null;
+        }
+        return userService.findByUsername(username)
+                .map(user -> user.getId())
+                .orElse(null);
+    }
+
     @GetMapping("/list")
     public Result<List<WeeklyReport>> list(@RequestParam(required = false) String userId, HttpServletRequest request) {
-        // 如果userId为"all"，返回所有记录（领导端）
-        if ("all".equals(userId)) {
-            return Result.success(weeklyReportService.findAll());
-        }
-        // 如果userId为空或未指定，默认查询当前用户的记录（员工端）
-        if (userId == null || userId.isEmpty()) {
-            String username = (String) request.getAttribute("username");
-            if (username != null) {
-                String finalUserId = userService.findByUsername(username)
-                        .map(user -> user.getId())
-                        .orElse(null);
-                if (finalUserId != null && !finalUserId.isEmpty()) {
-                    return Result.success(weeklyReportService.findByUserId(finalUserId));
+        boolean admin = isAdmin(request);
+        String currentUserId = getCurrentUserId(request);
+        // 管理员：不传或传all
+        if (admin && (userId == null || userId.isEmpty() || "all".equals(userId))) {
+            // 管理员可见全部“已提交”，草稿只看自己的
+            List<WeeklyReport> all = weeklyReportService.findAll();
+            List<WeeklyReport> filtered = new java.util.ArrayList<>();
+            for (WeeklyReport r : all) {
+                if ("draft".equalsIgnoreCase(r.getStatus())) {
+                    if (currentUserId != null && currentUserId.equals(r.getUserId())) {
+                        filtered.add(r);
+                    }
+                } else {
+                    filtered.add(r);
                 }
             }
-            // 如果无法获取用户ID，返回空列表
+            return Result.success(filtered);
+        }
+        // 非管理员禁止all
+        if (!admin && "all".equals(userId)) {
+            return forbidden();
+        }
+        // 默认当前用户
+        if (userId == null || userId.isEmpty()) {
+            if (currentUserId != null && !currentUserId.isEmpty()) {
+                return Result.success(weeklyReportService.findByUserId(currentUserId));
+            }
             return Result.success(new java.util.ArrayList<>());
         }
-        // 如果指定了userId，查询指定用户的记录
+        // 指定 userId
         return Result.success(weeklyReportService.findByUserId(userId));
     }
 
@@ -170,17 +191,35 @@ public class WeeklyReportController {
     }
 
     @GetMapping("/export")
-    public void export(HttpServletResponse response, @RequestParam(required = false) String userId, HttpServletRequest request) {
+    public void export(HttpServletResponse response, @RequestParam(required = false) String userId,
+            HttpServletRequest request) {
         if (!hasPermission(request, MODULE_WEEKLY_REPORT, p -> Boolean.TRUE.equals(p.getCanRead()))) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
         try {
             List<WeeklyReport> reports;
+            boolean admin = isAdmin(request);
+            String currentUserId = getCurrentUserId(request);
             if (userId != null && !userId.isEmpty()) {
                 reports = weeklyReportService.findByUserId(userId);
             } else {
                 reports = weeklyReportService.findAll();
+            }
+
+            // 管理员导出时，同样遵守“草稿只看自己”规则
+            if (admin) {
+                List<WeeklyReport> filtered = new java.util.ArrayList<>();
+                for (WeeklyReport r : reports) {
+                    if ("draft".equalsIgnoreCase(r.getStatus())) {
+                        if (currentUserId != null && currentUserId.equals(r.getUserId())) {
+                            filtered.add(r);
+                        }
+                    } else {
+                        filtered.add(r);
+                    }
+                }
+                reports = filtered;
             }
 
             List<String> headers = new ArrayList<>();
@@ -208,4 +247,3 @@ public class WeeklyReportController {
         }
     }
 }
-

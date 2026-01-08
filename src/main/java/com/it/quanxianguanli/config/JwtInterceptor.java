@@ -30,6 +30,10 @@ public class JwtInterceptor implements HandlerInterceptor {
                 if (username != null && jwtUtil.validateToken(token, username)) {
                     request.setAttribute("username", username);
                     request.setAttribute("roleId", jwtUtil.extractRoleId(token));
+                    String userId = jwtUtil.extractUserId(token);
+                    if (userId != null) {
+                        request.setAttribute("userId", userId);
+                    }
                     return true;
                 }
             } catch (Exception e) {

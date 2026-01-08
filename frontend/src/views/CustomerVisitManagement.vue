@@ -154,6 +154,7 @@ import {
 } from '../api/customerVisit'
 import { getCustomerList } from '../api/customer'
 import { canRead, loadPermissions } from '../utils/permission'
+import { filterValidCustomers } from '../utils/customer'
 
 const loading = ref(false)
 const visitList = ref([])
@@ -209,9 +210,23 @@ const loadData = async () => {
 const loadCustomers = async () => {
   try {
     const res = await getCustomerList()
-    customerList.value = res.data || []
+    let data = []
+    
+    if (res && res.code === 200) {
+      data = res.data || []
+    } else if (res && res.data) {
+      // 兼容不同的响应格式
+      data = Array.isArray(res.data) ? res.data : []
+    }
+    
+    // 过滤掉没有有效ID的客户（这些是未保存到数据库的记录）
+    customerList.value = filterValidCustomers(data)
+    
+    console.log('加载的客户列表（已过滤无效数据）:', customerList.value.length, '条')
   } catch (error) {
     console.error('加载客户列表失败', error)
+    ElMessage.error('加载客户列表失败：' + (error.message || '未知错误'))
+    customerList.value = []
   }
 }
 
@@ -240,7 +255,7 @@ const handleReset = () => {
   loadData()
 }
 
-const handleAdd = () => {
+const handleAdd = async () => {
   dialogTitle.value = '新增来访记录'
   formData.value = {
     id: null,
@@ -254,12 +269,16 @@ const handleAdd = () => {
     visitMatter: '',
     remarks: ''
   }
+  // 打开对话框前重新加载客户列表，确保包含最新添加的客户
+  await loadCustomers()
   dialogVisible.value = true
 }
 
-const handleEdit = (row) => {
+const handleEdit = async (row) => {
   dialogTitle.value = '修改来访记录'
   formData.value = { ...row }
+  // 打开对话框前重新加载客户列表，确保包含最新添加的客户
+  await loadCustomers()
   dialogVisible.value = true
 }
 

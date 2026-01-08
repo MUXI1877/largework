@@ -20,6 +20,10 @@ request.interceptors.request.use(
         if (config.data) {
             console.log('请求数据:', JSON.stringify(config.data, null, 2))
         }
+        // ✅ 添加请求参数调试（GET 请求）
+        if (config.params) {
+            console.log('请求参数:', JSON.stringify(config.params, null, 2))
+        }
 
         // 注册、登录、身份证验证和选项接口不需要token
         const noAuthUrls = ['/auth/', '/user/register', '/user/verify', '/option/list']

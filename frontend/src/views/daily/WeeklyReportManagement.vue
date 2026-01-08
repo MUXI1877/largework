@@ -8,8 +8,7 @@
             <el-button 
               v-permission="{ moduleId: 'm025', action: 'add' }"
               type="primary" 
-              @click="handleAdd" 
-              v-if="!isLeader"
+              @click="handleAdd"
             >
               新建周报
             </el-button>
@@ -63,7 +62,7 @@
             <el-button type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
             <el-button
               v-permission="{ moduleId: 'm025', action: 'update' }"
-              v-if="!isLeader && scope.row.status === 'draft'"
+              v-if="scope.row.status === 'draft'"
               type="warning"
               size="small"
               @click="handleEdit(scope.row)"
@@ -72,7 +71,7 @@
             </el-button>
             <el-button
               v-permission="{ moduleId: 'm025', action: 'update' }"
-              v-if="!isLeader && scope.row.status === 'draft'"
+              v-if="scope.row.status === 'draft'"
               type="success"
               size="small"
               @click="handleSubmit(scope.row)"
@@ -82,7 +81,7 @@
             <el-button type="info" size="small" @click="handlePrint(scope.row)">打印</el-button>
             <el-button
               v-permission="{ moduleId: 'm025', action: 'delete' }"
-              v-if="!isLeader && scope.row.status === 'draft'"
+              v-if="scope.row.status === 'draft'"
               type="danger"
               size="small"
               @click="handleDelete(scope.row)"
@@ -185,7 +184,7 @@ import {
   deleteWeeklyReport,
   exportWeeklyReports
 } from '../../api/weekly-report'
-import { getToken } from '../../utils/auth'
+import { getRoleId, isSuperAdmin, isSystemAdmin } from '../../utils/auth'
 
 const reportList = ref([])
 const loading = ref(false)
@@ -194,7 +193,7 @@ const viewDialogVisible = ref(false)
 const dialogTitle = ref('新建周报')
 const formRef = ref(null)
 
-// 判断是否为领导（简化处理，实际应该从权限系统获取）
+// 判断是否为领导（r001 超管 / r002 系统管理员 视为领导）
 const isLeader = ref(false)
 
 const queryForm = ref({
@@ -255,7 +254,7 @@ const formatDateTime = (dateTime) => {
 const loadData = async () => {
   loading.value = true
   try {
-    // 如果是领导，传"all"获取所有记录；如果是员工，不传参数，后端自动返回当前用户的记录
+    // 领导查看所有，员工只看自己的
     const res = await getWeeklyReportList(isLeader.value ? 'all' : undefined)
     reportList.value = res.data || []
   } catch (error) {
@@ -444,10 +443,9 @@ const resetForm = () => {
 onMounted(async () => {
   await loadPermissions()
   if (canRead('m025')) {
-    // 判断是否为领导（简化处理，实际应该从权限系统获取）
-    // 这里可以根据角色ID或其他方式判断
-    // 默认不是领导，如果需要判断，可以从后端获取用户角色信息
-    isLeader.value = false
+    // 领导判定：超管/系统管理员
+    const roleId = getRoleId()
+    isLeader.value = isSuperAdmin() || isSystemAdmin() || roleId === 'r001' || roleId === 'r002'
     
     loadData()
   } else {

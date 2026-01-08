@@ -30,13 +30,22 @@ public class ReceivableQueryService {
         Pageable pageable = PageRequest.of(page, size);
         List<ReceivablePlan> plans = planRepository.findAll((root, query, cb) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            // 过滤掉id为null或空的记录
+            predicates.add(cb.isNotNull(root.get("id")));
+            predicates.add(cb.notEqual(root.get("id"), ""));
             if (contractCode != null && !contractCode.isEmpty()) {
                 predicates.add(cb.like(root.get("contractCode"), "%" + contractCode + "%"));
             }
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         });
 
-        Map<String, List<ReceivableReceipt>> receiptMap = receiptRepository.findAll().stream()
+        // 查询所有回款记录，过滤掉id为null或空的记录
+        Map<String, List<ReceivableReceipt>> receiptMap = receiptRepository.findAll((root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isNotNull(root.get("id")));
+            predicates.add(cb.notEqual(root.get("id"), ""));
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        }).stream()
                 .collect(Collectors.groupingBy(ReceivableReceipt::getContractCode));
 
         String companyFilter = companyName == null ? "" : companyName.trim().toLowerCase();
@@ -57,15 +66,12 @@ public class ReceivableQueryService {
                     continue;
                 }
             }
-            BigDecimal actualAmount = receipts.stream()
-                    .map(ReceivableReceipt::getReceiveAmount)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            LocalDate actualDate = receipts.stream()
-                    .map(ReceivableReceipt::getReceiveDate)
-                    .filter(Objects::nonNull)
-                    .max(LocalDate::compareTo)
-                    .orElse(null);
+            // 实际到款 = 该计划的已付金额（因为回款登记后会自动按时间顺序分配到各个计划中）
+            // 每个计划项的实际到款就是分配给该计划项的金额
+            BigDecimal actualAmount = plan.getPaidAmount() != null ? plan.getPaidAmount() : BigDecimal.ZERO;
+            
+            // 实际到款日期：使用计划的付款日期
+            LocalDate actualDate = plan.getPaidDate();
 
             ReceivableSummary dto = new ReceivableSummary();
             // 生成应收账编号：合同号-款项阶段（如果款项阶段不为空）

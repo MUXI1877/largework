@@ -11,6 +11,9 @@ public class DailyDestination extends BaseEntity {
     @Column(name = "user_id", nullable = false, length = 36)
     private String userId;
 
+    @Transient
+    private String userName; // 填报人姓名（非持久化，返回给前端展示）
+
     @Column(name = "destination_time", nullable = false)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime destinationTime;
@@ -27,6 +30,14 @@ public class DailyDestination extends BaseEntity {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public LocalDateTime getDestinationTime() {

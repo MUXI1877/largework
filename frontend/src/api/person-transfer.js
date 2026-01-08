@@ -8,6 +8,10 @@ export const getPersonTransferById = (id) => {
   return request.get(`/person-transfer/${id}`)
 }
 
+export const getPersonTransferByPerson = (personId) => {
+  return request.get(`/person-transfer/person/${personId}`)
+}
+
 export const savePersonTransfer = (data) => {
   return request.post('/person-transfer/save', data)
 }

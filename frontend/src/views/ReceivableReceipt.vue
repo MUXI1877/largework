@@ -98,7 +98,12 @@
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
       <el-form :model="form" label-width="120px" ref="formRef">
         <el-form-item label="合同号" required>
-          <el-input v-model="form.contractCode" :disabled="!!form.id" />
+          <el-input 
+            v-model="form.contractCode" 
+            :disabled="!!form.id"
+            @blur="handleContractCodeChange"
+            placeholder="输入合同号后自动填充合同信息"
+          />
         </el-form-item>
         <el-form-item label="合同名称" required>
           <el-input v-model="form.contractName" :disabled="!!form.id" />
@@ -137,9 +142,11 @@ import { canRead, loadPermissions } from '../utils/permission'
 import {
   getReceivableReceipts,
   createReceivableReceipt,
+  updateReceivableReceipt,
   updateReceiptRemark,
   deleteReceivableReceipt,
-  exportReceivableReceipts
+  exportReceivableReceipts,
+  getContractInfo
 } from '../api/receivable'
 
 const loading = ref(false)
@@ -233,7 +240,8 @@ const handlePageChange = (val) => {
 }
 
 const openDialog = (row) => {
-  dialogTitle.value = row ? '修改备注' : '新增回款'
+  // 编辑模式允许修改金额等字段，因此标题改为“编辑回款”
+  dialogTitle.value = row ? '编辑回款' : '新增回款'
   Object.assign(form, {
     id: row?.id || null,
     contractCode: row?.contractCode || '',
@@ -247,6 +255,39 @@ const openDialog = (row) => {
     remainingAmount: row?.remainingAmount || null
   })
   dialogVisible.value = true
+}
+
+// 处理合同号变化，自动填充合同名称和合同总额
+const handleContractCodeChange = async () => {
+  // 如果是修改模式，不自动填充
+  if (form.id) {
+    return
+  }
+  
+  // 如果合同号为空，清空相关字段
+  if (!form.contractCode || form.contractCode.trim() === '') {
+    form.contractName = ''
+    form.contractAmount = null
+    return
+  }
+  
+  try {
+    const res = await getContractInfo(form.contractCode.trim())
+    // 响应拦截器已经处理过，res.data 就是 ContractInfo 对象
+    if (res && res.data) {
+      form.contractName = res.data.contractName || ''
+      form.contractAmount = res.data.contractAmount || null
+    } else {
+      ElMessage.warning('未找到该合同号的信息')
+      form.contractName = ''
+      form.contractAmount = null
+    }
+  } catch (e) {
+    console.error('查询合同信息失败:', e)
+    ElMessage.warning(e.message || '查询合同信息失败，请检查合同号是否正确')
+    form.contractName = ''
+    form.contractAmount = null
+  }
 }
 
 const save = async () => {
@@ -265,7 +306,8 @@ const save = async () => {
       delete payload.id
       await createReceivableReceipt(payload)
     } else {
-      await updateReceiptRemark(form.id, { remarks: form.remarks })
+      // 编辑时，调用后端完整更新接口，支持修改金额、日期等
+      await updateReceivableReceipt(form.id, payload)
     }
     ElMessage.success('保存成功')
     dialogVisible.value = false
